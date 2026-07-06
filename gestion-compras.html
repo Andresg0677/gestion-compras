@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Compras</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --azul:#1a4b8c; --azul-osc:#0f3260; --azul-cl:#e8f0fb;
+  --verde:#1e8f5a; --naranja:#e07b1f; --rojo:#c0392b;
+  --gris:#f4f6f9; --borde:#d8dfe8; --texto:#2c3345; --texto-sec:#68738a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gris);color:var(--texto);font-size:14px}
+header{background:linear-gradient(135deg,var(--azul-osc),var(--azul));color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+header h1{font-size:19px;font-weight:600}
+header .sub{font-size:12px;opacity:.85}
+nav{background:#fff;border-bottom:2px solid var(--borde);display:flex;flex-wrap:wrap;padding:0 16px;position:sticky;top:0;z-index:50}
+nav button{border:none;background:none;padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--texto-sec);cursor:pointer;border-bottom:3px solid transparent}
+nav button:hover{color:var(--azul)}
+nav button.act{color:var(--azul);border-bottom-color:var(--azul)}
+main{max-width:1200px;margin:0 auto;padding:20px 16px 60px}
+section{display:none}
+section.act{display:block}
+.card{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(20,40,80,.06)}
+.card h2{font-size:16px;margin-bottom:12px;color:var(--azul-osc)}
+.card h3{font-size:14px;margin-bottom:8px;color:var(--azul-osc)}
+.fila{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.campo{display:flex;flex-direction:column;gap:4px}
+.campo label{font-size:12px;font-weight:600;color:var(--texto-sec)}
+input,select,textarea{padding:8px 10px;border:1px solid var(--borde);border-radius:6px;font-size:13.5px;font-family:inherit;background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--azul-cl);border-color:var(--azul)}
+.btn{padding:9px 16px;border:none;border-radius:6px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--azul);color:#fff}
+.btn:hover{background:var(--azul-osc)}
+.btn.sec{background:#fff;color:var(--azul);border:1px solid var(--azul)}
+.btn.sec:hover{background:var(--azul-cl)}
+.btn.verde{background:var(--verde)}
+.btn.chico{padding:5px 10px;font-size:12px}
+.btn.rojo{background:#fff;color:var(--rojo);border:1px solid var(--rojo)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;background:var(--azul-cl);color:var(--azul-osc);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+td{padding:8px 10px;border-bottom:1px solid var(--borde)}
+tr:hover td{background:#fafcff}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
+.tag.pendiente{background:#fdf1dc;color:#9a6a10}
+.tag.cotizada{background:#e0ecfb;color:var(--azul)}
+.tag.aprobada{background:#dff3e8;color:var(--verde)}
+.tag.rechazada{background:#fbe4e1;color:var(--rojo)}
+.tag.recibida{background:#ece7f7;color:#5b3fa8}
+.cots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px}
+.cot{border:1.5px solid var(--borde);border-radius:10px;padding:16px;background:#fff;position:relative}
+.cot.mejor{border-color:var(--verde);box-shadow:0 0 0 3px #dff3e8}
+.cot .pos{position:absolute;top:-11px;left:14px;background:var(--azul);color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px}
+.cot.mejor .pos{background:var(--verde)}
+.cot .precio{font-size:22px;font-weight:700;color:var(--azul-osc);margin:6px 0}
+.cot .prov{font-weight:600}
+.cot .det{font-size:12.5px;color:var(--texto-sec);margin-bottom:10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:14px}
+.kpi .v{font-size:24px;font-weight:700;color:var(--azul-osc)}
+.kpi .l{font-size:12px;color:var(--texto-sec);margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}}
+.chartbox{position:relative;height:280px}
+.nota{font-size:12.5px;color:var(--texto-sec);background:var(--azul-cl);border-radius:6px;padding:10px 12px;margin:10px 0}
+.niveles{display:flex;gap:0;border:1px solid var(--borde);border-radius:6px;overflow:hidden}
+.niveles button{border:none;background:#fff;padding:8px 14px;font-size:12.5px;cursor:pointer;color:var(--texto-sec);border-right:1px solid var(--borde)}
+.niveles button:last-child{border-right:none}
+.niveles button.act{background:var(--azul);color:#fff;font-weight:600}
+.sitios-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sitios-links a{display:inline-block;padding:7px 13px;border:1px solid var(--azul);color:var(--azul);border-radius:6px;text-decoration:none;font-size:12.5px;font-weight:600}
+.sitios-links a:hover{background:var(--azul-cl)}
+#informeOut{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:28px;line-height:1.55}
+#informeOut h1{font-size:20px;color:var(--azul-osc);margin-bottom:4px}
+#informeOut h2{font-size:15px;color:var(--azul-osc);margin:18px 0 8px;border-bottom:2px solid var(--azul-cl);padding-bottom:4px}
+#informeOut table{margin:8px 0}
+.vacio{text-align:center;color:var(--texto-sec);padding:24px;font-size:13px}
+dialog{border:none;border-radius:12px;padding:22px;max-width:520px;width:92%;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(15,30,60,.45)}
+dialog h3{margin-bottom:14px;color:var(--azul-osc)}
+dialog .campo{margin-bottom:10px}
+dialog input,dialog select,dialog textarea{width:100%}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--azul-osc);color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.3);opacity:0;transition:opacity .3s}
+.toast.on{opacity:1}
+#loginOverlay{position:fixed;inset:0;background:linear-gradient(135deg,#0f3260,#1a4b8c);display:flex;align-items:center;justify-content:center;z-index:1000}
+.login-box{background:#fff;border-radius:14px;padding:34px 30px;width:92%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.login-box h2{color:var(--azul-osc);margin-bottom:4px;font-size:20px}
+.login-box .sub2{color:var(--texto-sec);font-size:13px;margin-bottom:18px}
+.login-box .campo{margin-bottom:12px}
+.login-box input{width:100%}
+.login-err{color:var(--rojo);font-size:12.5px;margin:6px 0;min-height:16px}
+body.bloqueado header,body.bloqueado nav,body.bloqueado main{filter:blur(6px);pointer-events:none;user-select:none}
+.mejor-fila td{background:#dff3e8!important}
+.score{font-weight:700;color:var(--verde)}
+.mini{font-size:11.5px;color:var(--texto-sec)}
+@media print{
+  nav,header .sub,.no-print{display:none!important}
+  body{background:#fff}
+  main{max-width:none;padding:0}
+  section{display:none}
+  #sec-informes{display:block}
+  #sec-informes .card:first-child{display:none}
+}
+</style>
+</head>
+<body class="bloqueado">
+<div id="loginOverlay">
+  <div class="login-box">
+    <h2>🛒 Gestión de Compras</h2>
+    <div class="sub2">Ingresá tus credenciales para acceder</div>
+    <div class="campo"><label>Usuario</label><input id="logUsuario" autocomplete="username"></div>
+    <div class="campo"><label>Contraseña</label><input id="logClave" type="password" autocomplete="current-password"></div>
+    <div class="login-err" id="logError"></div>
+    <button class="btn" style="width:100%" onclick="iniciarSesion()">Ingresar</button>
+    <p style="font-size:11.5px;color:var(--texto-sec);margin-top:14px">Acceso inicial: usuario <b>admin</b> · contraseña <b>compras123</b>. Cambialos en Configuración → Seguridad.</p>
+  </div>
+</div>
+<header>
+  <div>
+    <h1>🛒 Sistema de Gestión de Compras</h1>
+    <div class="sub">Cotizaciones · Proveedores · Solicitudes · Informes</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="sub" id="fechaHoy"></div>
+    <span class="sub" id="usuarioActivo"></span>
+    <button class="btn chico sec no-print" style="border-color:#fff;color:#fff;background:transparent" onclick="cerrarSesion()">Salir</button>
+  </div>
+</header>
+<nav>
+  <button data-sec="busqueda" class="act">🔍 Búsqueda y Cotizaciones</button>
+  <button data-sec="solicitudes">📋 Solicitudes</button>
+  <button data-sec="stock">📦 Stock</button>
+  <button data-sec="proveedores">🏭 Proveedores y Listas</button>
+  <button data-sec="informes">📄 Informes</button>
+  <button data-sec="dashboard">📊 Dashboard</button>
+  <button data-sec="config">⚙️ Configuración</button>
+</nav>
+<main>
+
+<!-- ============ BÚSQUEDA ============ -->
+<section id="sec-busqueda" class="act">
+  <div class="card">
+    <h2>Búsqueda de productos y cotizaciones</h2>
+    <div class="fila">
+      <div class="campo" style="flex:1;min-width:220px">
+        <label>Palabra/s clave</label>
+        <input id="qBusqueda" type="text" placeholder="Ej.: notebook, resma A4, silla ergonómica...">
+      </div>
+      <div class="campo">
+        <label>Nivel de búsqueda</label>
+        <div class="niveles" id="niveles">
+          <button data-n="1" class="act">1 · General</button>
+          <button data-n="2">2 · Intermedio</button>
+          <button data-n="3">3 · Específico</button>
+        </div>
+      </div>
+      <button class="btn" onclick="buscar()">Buscar</button>
+    </div>
+    <div class="nota">
+      <b>Niveles:</b> <b>General</b> encuentra productos que contengan <i>alguna</i> de las palabras (más resultados) ·
+      <b>Intermedio</b> exige <i>todas</i> las palabras · <b>Específico</b> busca la <i>frase exacta</i> (menos resultados, más precisos).
+    </div>
+  </div>
+  <div id="resBusqueda"></div>
+</section>
+
+<!-- ============ SOLICITUDES ============ -->
+<section id="sec-solicitudes">
+  <div class="card">
+    <div class="fila" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Solicitudes de compra</h2>
+      <div class="fila">
+        <button class="btn sec" onclick="abrirPedidos()">📥 Ingresar pedidos de email</button>
+        <button class="btn" onclick="abrirNuevaSolicitud()">+ Nueva solicitud</button>
+      </div>
+    </div>
+    <div class="fila" style="margin-top:12px">
+      <div class="campo"><label>Filtrar por sector</label><select id="fSector" onchange="renderSolicitudes()"></select></div>
+      <div class="campo"><label>Filtrar por estado</label>
+        <select id="fEstado" onchange="renderSolicitudes()">
+          <option value="">Todos</option><option>Pendiente</option><option>Cotizada</option><option>Aprobada</option><option>Recibida</option><option>Rechazada</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="overflow-x:auto">
+    <table id="tSolicitudes"><thead><tr>
+      <th>N°</th><th>Fecha</th><th>Sector</th><th>Solicitante</th><th>Producto</th><th>Cant.</th><th>Monto est.</th><th>Estado</th><th></th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<!-- ============ STOCK ============ -->
+<section id="sec-stock">
+  <div class="card" id="cardRecom"></div>
+  <div class="card">
+    <div class="fila" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Stock actual</h2>
+      <button class="btn" onclick="abrirArticulo()">+ Nuevo artículo</button>
+    </div>
+    <div style="overflow-x:auto;margin-top:10px">
+      <table id="tStock"><thead><tr><th>Artículo</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Estado</th><th>Últ. compra</th><th>Sin compras</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Movimientos recientes</h2>
+    <div style="overflow-x:auto"><table id="tMovs"><thead><tr><th>Fecha</th><th>Artículo</th><th>Tipo</th><th>Cant.</th><th>Referencia</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<!-- ============ PROVEEDORES ============ -->
+<section id="sec-proveedores">
+  <div class="card">
+    <h2>Importar listas de precios</h2>
+    <p style="color:var(--texto-sec);font-size:13px;margin-bottom:10px">
+      Seleccioná la <b>carpeta</b> donde guardás las listas de productos y precios de tus proveedores
+      (archivos <b>.xlsx, .xls, .csv o .pdf</b>). El sistema detecta automáticamente las columnas de producto, precio y categoría; en los PDF extrae los renglones que contienen producto y precio.
+      El nombre del archivo se usa como nombre del proveedor si no existe una columna "proveedor".
+    </p>
+    <div class="fila">
+      <button class="btn" onclick="document.getElementById('inpCarpeta').click()">📁 Incorporar carpeta con listas</button>
+      <button class="btn sec" onclick="document.getElementById('inpArchivos').click()">Seleccionar archivos sueltos</button>
+      <button class="btn sec" onclick="descargarPlantilla()">Descargar plantilla CSV</button>
+    </div>
+    <input type="file" id="inpCarpeta" webkitdirectory multiple style="display:none" onchange="importarArchivos(this.files)">
+    <input type="file" id="inpArchivos" multiple accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="importarArchivos(this.files)">
+    <div id="resImport"></div>
+  </div>
+  <div class="card">
+    <div class="fila" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Proveedores</h2>
+      <button class="btn" onclick="abrirNuevoProveedor()">+ Agregar proveedor</button>
+    </div>
+    <div style="overflow-x:auto;margin-top:10px">
+      <table id="tProveedores"><thead><tr><th>Proveedor</th><th>Rubro</th><th>Email</th><th>Calif.</th><th>Plazo</th><th>Envío</th><th>Productos</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Catálogo de productos (<span id="cntProductos">0</span>)</h2>
+    <div class="fila" style="margin-bottom:10px">
+      <input id="filtroCat" type="text" placeholder="Filtrar catálogo..." oninput="renderCatalogo()" style="flex:1;min-width:200px">
+    </div>
+    <div style="overflow-x:auto;max-height:420px;overflow-y:auto">
+      <table id="tCatalogo"><thead><tr><th>Producto</th><th>Categoría</th><th>Proveedor</th><th>Precio</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ INFORMES ============ -->
+<section id="sec-informes">
+  <div class="card no-print">
+    <h2>Generador de informes</h2>
+    <div class="fila">
+      <div class="campo"><label>Tipo de informe</label>
+        <select id="tipoInforme">
+          <option value="general">Informe general de compras</option>
+          <option value="sector">Solicitudes por sector</option>
+          <option value="proveedores">Análisis de proveedores</option>
+        </select>
+      </div>
+      <div class="campo"><label>Sector (opcional)</label><select id="infSector"></select></div>
+      <button class="btn" onclick="generarInforme()">Generar informe</button>
+      <button class="btn sec" onclick="window.print()">🖨️ Imprimir / PDF</button>
+      <button class="btn sec" onclick="descargarInforme()">⬇️ Descargar HTML</button>
+    </div>
+  </div>
+  <div id="informeOut"><div class="vacio">Generá un informe para verlo aquí.</div></div>
+</section>
+
+<!-- ============ DASHBOARD ============ -->
+<section id="sec-dashboard">
+  <div class="card no-print">
+    <div class="fila">
+      <div class="campo"><label>Sector</label><select id="dashSector" onchange="renderDashboard()"></select></div>
+      <div class="campo"><label>Desde</label><input type="date" id="dashDesde" onchange="renderDashboard()"></div>
+      <div class="campo"><label>Hasta</label><input type="date" id="dashHasta" onchange="renderDashboard()"></div>
+      <button class="btn sec" onclick="limpiarFiltrosDash()">Limpiar filtros</button>
+    </div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid2">
+    <div class="card"><h3>Solicitudes por sector</h3><div class="chartbox"><canvas id="chSector"></canvas></div></div>
+    <div class="card"><h3>Montos por sector ($)</h3><div class="chartbox"><canvas id="chMonto"></canvas></div></div>
+    <div class="card"><h3>Estado de solicitudes</h3><div class="chartbox"><canvas id="chEstado"></canvas></div></div>
+    <div class="card"><h3>Evolución mensual de compras ($)</h3><div class="chartbox"><canvas id="chMes"></canvas></div></div>
+  </div>
+</section>
+
+<!-- ============ CONFIG ============ -->
+<section id="sec-config">
+  <div class="card">
+    <h2>Sitios web de compra masiva</h2>
+    <p style="color:var(--texto-sec);font-size:13px;margin-bottom:10px">
+      Configurá los sitios donde el sistema buscará precios de referencia. Usá <b>{q}</b> en la URL donde va el término de búsqueda.
+      Al buscar, se generan enlaces directos a cada sitio con tus palabras clave.
+    </p>
+    <div style="overflow-x:auto"><table id="tSitios"><thead><tr><th>Sitio</th><th>URL de búsqueda</th><th>Activo</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="fila" style="margin-top:12px">
+      <div class="campo"><label>Nombre</label><input id="sitioNombre" placeholder="Ej.: Mercado Libre"></div>
+      <div class="campo" style="flex:1;min-width:240px"><label>URL con {q}</label><input id="sitioUrl" placeholder="https://listado.mercadolibre.com.ar/{q}"></div>
+      <button class="btn" onclick="agregarSitio()">Agregar sitio</button>
+    </div>
+    <label style="display:block;margin-top:12px;font-size:13px;font-weight:600;color:var(--azul-osc)">
+      <input type="checkbox" id="chkMlAuto" onchange="state.mlAuto=this.checked;guardar()">
+      🔎 Búsqueda automática en Mercado Libre: al cotizar, sumar las 2 mejores alternativas del sitio al comparativo (según criterios de compra eficiente)
+    </label>
+    <p style="color:var(--texto-sec);font-size:12px;margin-top:4px">
+      Si Mercado Libre restringe la consulta automática, el sistema lo avisa y podés usar el enlace de búsqueda y registrar la oferta manualmente.
+    </p>
+  </div>
+  <div class="card">
+    <h2>📧 Recepción de pedidos por email</h2>
+    <div class="fila">
+      <div class="campo" style="flex:1;min-width:240px"><label>Casilla que recibe los pedidos de los sectores</label><input id="mailPedidosInput" placeholder="solicitudpedidos@tuempresa.com.ar"></div>
+      <button class="btn" onclick="guardarMailPedidos()">Guardar</button>
+      <button class="btn sec" onclick="copiarPlantillaPedido()">📋 Copiar plantilla para los sectores</button>
+    </div>
+    <p style="color:var(--texto-sec);font-size:12.5px;margin-top:8px">
+      <b>Circuito:</b> los sectores envían su pedido a esa casilla usando la plantilla → en <b>Solicitudes → 📥 Ingresar pedidos de email</b> pegás el contenido de los mails recibidos
+      y el sistema crea las solicitudes automáticamente (detecta sector, solicitante, producto y cantidad, incluso varios pedidos juntos).
+      El ingreso sin intervención (leyendo la casilla solo) requiere conectar un servidor de correo: se puede agregar más adelante.
+    </p>
+  </div>
+  <div class="card">
+    <h2>🔗 Conexión oficial con Mercado Libre (recomendada — 100% estable)</h2>
+    <p style="color:var(--texto-sec);font-size:13px;margin-bottom:10px">
+      Con credenciales propias, la búsqueda automática usa la <b>API oficial</b> de Mercado Libre: sin proxies, sin bloqueos.
+      El sistema pide y renueva el token de acceso automáticamente (dura 6 horas).
+    </p>
+    <div class="fila">
+      <div class="campo"><label>App ID (Client ID)</label><input id="mlAppId" style="min-width:200px"></div>
+      <div class="campo"><label>Secret Key (Client Secret)</label><input id="mlSecret" type="password" style="min-width:200px"></div>
+      <button class="btn" onclick="guardarCredML()">Guardar y probar conexión</button>
+    </div>
+    <div id="mlEstado" style="margin-top:8px;font-size:13px"></div>
+    <details style="margin-top:10px">
+      <summary style="cursor:pointer;font-weight:600;color:var(--azul)">📋 Cómo obtener las credenciales (una sola vez, gratis)</summary>
+      <ol style="margin:10px 0 0 20px;font-size:13px;line-height:1.7;color:var(--texto)">
+        <li>Entrá a <b>developers.mercadolibre.com.ar</b> e iniciá sesión con la cuenta de Mercado Libre de la empresa.</li>
+        <li>Andá a <b>"Mis aplicaciones"</b> → <b>"Crear nueva aplicación"</b>.</li>
+        <li>Completá: nombre (ej.: "Gestión de Compras"), descripción breve, y en <b>Redirect URI</b> poné <code>https://localhost</code> (no se usa, pero es obligatorio).</li>
+        <li>En permisos/scopes dejá solo <b>lectura (read)</b>. Guardá la aplicación.</li>
+        <li>Copiá el <b>App ID</b> y la <b>Secret Key</b> que te muestra ML y pegalos arriba. Listo.</li>
+      </ol>
+      <p style="font-size:12px;color:var(--texto-sec);margin-top:8px">⚠️ Las credenciales se guardan solo en este navegador. Si usás la app en varias PC, cargalas en cada una (o pasalas con el respaldo JSON).</p>
+    </details>
+  </div>
+  <div class="card">
+    <h2>Sectores de la empresa</h2>
+    <div class="fila">
+      <input id="nuevoSector" placeholder="Nuevo sector..." style="min-width:200px">
+      <button class="btn" onclick="agregarSector()">Agregar</button>
+    </div>
+    <div id="listaSectores" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <h2>⚖️ Criterios de "compra eficiente"</h2>
+    <p style="color:var(--texto-sec);font-size:13px;margin-bottom:10px">
+      Definí qué peso tiene cada criterio al comparar opciones. El costo final ya incluye precio, descuento y envío.
+    </p>
+    <div class="fila">
+      <div class="campo"><label>Costo final (%)</label><input id="pesoCosto" type="number" min="0" max="100" style="width:110px"></div>
+      <div class="campo"><label>Plazo de entrega (%)</label><input id="pesoPlazo" type="number" min="0" max="100" style="width:110px"></div>
+      <div class="campo"><label>Calificación (%)</label><input id="pesoCalif" type="number" min="0" max="100" style="width:110px"></div>
+      <button class="btn" onclick="guardarPesos()">Guardar criterios</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>💰 Financiación e inflación (IPC)</h2>
+    <div class="fila">
+      <div class="campo"><label>IPC mensual actual (%)</label><input id="ipcInput" type="number" step="0.1" min="0" style="width:130px"></div>
+      <button class="btn" onclick="guardarIpc()">Guardar IPC</button>
+    </div>
+    <p style="color:var(--texto-sec);font-size:12px;margin-top:8px">
+      Se usa para calcular el <b>valor presente</b> de pagos financiados (30/60/90 días y cuotas) en los cuadros comparativos:
+      con inflación alta, pagar en cuotas sin interés puede convenir más que un precio contado menor.
+      Actualizá este valor todos los meses con el dato oficial de INDEC.
+    </p>
+  </div>
+  <div class="card">
+    <h2>🔐 Seguridad — usuario y contraseña</h2>
+    <div class="fila">
+      <div class="campo"><label>Contraseña actual</label><input id="segClaveActual" type="password"></div>
+      <div class="campo"><label>Nuevo usuario</label><input id="segUsuario"></div>
+      <div class="campo"><label>Nueva contraseña</label><input id="segClave" type="password"></div>
+      <div class="campo"><label>Repetir contraseña</label><input id="segClave2" type="password"></div>
+      <button class="btn" onclick="cambiarCredenciales()">Guardar credenciales</button>
+    </div>
+    <p style="color:var(--texto-sec);font-size:12px;margin-top:8px">
+      La contraseña se guarda cifrada (hash SHA-256) en este navegador. Nota: al ser una aplicación local,
+      esta protección evita el acceso casual pero no reemplaza la seguridad de un servidor.
+    </p>
+  </div>
+  <div class="card">
+    <h2>Datos</h2>
+    <div class="fila">
+      <button class="btn sec" onclick="exportarDatos()">⬇️ Exportar respaldo (JSON)</button>
+      <button class="btn sec" onclick="document.getElementById('inpRespaldo').click()">⬆️ Restaurar respaldo</button>
+      <button class="btn rojo" onclick="reiniciarDatos()">Restablecer datos de ejemplo</button>
+    </div>
+    <input type="file" id="inpRespaldo" accept=".json" style="display:none" onchange="restaurarDatos(this.files[0])">
+    <p style="color:var(--texto-sec);font-size:12px;margin-top:8px">Los datos se guardan automáticamente en este navegador.</p>
+  </div>
+</section>
+</main>
+
+<!-- Diálogo solicitud -->
+<dialog id="dlgSolicitud">
+  <h3 id="dlgSolTitulo">Nueva solicitud de compra</h3>
+  <input type="hidden" id="solId">
+  <div class="campo"><label>Sector</label><select id="solSector"></select></div>
+  <div class="campo"><label>Solicitante</label><input id="solSolicitante" placeholder="Nombre y apellido"></div>
+  <div class="campo"><label>Producto / descripción</label><input id="solProducto"></div>
+  <div class="fila">
+    <div class="campo" style="flex:1"><label>Cantidad</label><input id="solCantidad" type="number" min="1" value="1"></div>
+    <div class="campo" style="flex:1"><label>Monto estimado ($)</label><input id="solMonto" type="number" min="0" step="0.01"></div>
+  </div>
+  <div class="fila">
+    <div class="campo" style="flex:1"><label>Estado</label>
+      <select id="solEstado"><option>Pendiente</option><option>Cotizada</option><option>Aprobada</option><option>Recibida</option><option>Rechazada</option></select>
+    </div>
+    <div class="campo" style="flex:1"><label>Entrega prevista (para el solicitante)</label><input id="solPrometida" type="date"></div>
+  </div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgSolicitud.close()">Cancelar</button>
+    <button class="btn" onclick="guardarSolicitud()">Guardar</button>
+  </div>
+</dialog>
+
+<!-- Diálogo proveedor -->
+<dialog id="dlgProveedor">
+  <h3>Proveedor</h3>
+  <input type="hidden" id="provId">
+  <div class="campo"><label>Nombre</label><input id="provNombre"></div>
+  <div class="campo"><label>Rubro</label><input id="provRubro" placeholder="Ej.: Insumos de oficina"></div>
+  <div class="campo"><label>Email</label><input id="provEmail" type="email"></div>
+  <div class="campo"><label>WhatsApp (con código de país, ej.: 5491122334455)</label><input id="provWsp" placeholder="549..."></div>
+  <div class="fila">
+    <div class="campo" style="flex:1"><label>Calificación (1-5)</label><input id="provCalif" type="number" min="1" max="5" step="0.1" value="3.5"></div>
+    <div class="campo" style="flex:1"><label>Plazo entrega (días)</label><input id="provPlazo" type="number" min="0" value="5"></div>
+    <div class="campo" style="flex:1"><label>Costo de envío ($)</label><input id="provEnvio" type="number" min="0" value="0"></div>
+  </div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgProveedor.close()">Cancelar</button>
+    <button class="btn" onclick="guardarProveedor()">Guardar</button>
+  </div>
+</dialog>
+
+<!-- Diálogo oferta de sitio web -->
+<dialog id="dlgOferta">
+  <h3>Registrar oferta de sitio de compra masiva</h3>
+  <div class="campo"><label>Sitio / fuente</label><input id="ofFuente" list="dlSitios" placeholder="Ej.: Mercado Libre"><datalist id="dlSitios"></datalist></div>
+  <div class="campo"><label>Producto</label><input id="ofProducto"></div>
+  <div class="fila">
+    <div class="campo" style="flex:1"><label>Precio ($)</label><input id="ofPrecio" type="number" min="0"></div>
+    <div class="campo" style="flex:1"><label>Envío ($)</label><input id="ofEnvio" type="number" min="0" value="0"></div>
+    <div class="campo" style="flex:1"><label>Descuento (%)</label><input id="ofDesc" type="number" min="0" max="100" value="0"></div>
+  </div>
+  <div class="fila">
+    <div class="campo" style="flex:1"><label>Entrega (días)</label><input id="ofPlazo" type="number" min="0" value="3"></div>
+    <div class="campo" style="flex:1"><label>Calificación vendedor (1-5)</label><input id="ofCalif" type="number" min="1" max="5" step="0.1" value="4.5"></div>
+    <div class="campo" style="flex:1"><label>Forma de pago</label>
+      <select id="ofPago"><option>Contado</option><option>30 días</option><option>60 días</option><option>90 días</option><option>3 cuotas</option><option>6 cuotas</option><option>12 cuotas</option></select>
+    </div>
+  </div>
+  <div class="campo"><label>Link de la publicación (opcional)</label><input id="ofUrl" placeholder="https://..."></div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgOferta.close()">Cancelar</button>
+    <button class="btn" onclick="guardarOferta()">Guardar oferta</button>
+  </div>
+</dialog>
+
+<!-- Diálogo cuadro comparativo -->
+<dialog id="dlgComp" style="max-width:900px">
+  <h3 id="compTitulo">Cuadro comparativo</h3>
+  <input type="hidden" id="compSolId">
+  <div id="compEstado"></div>
+  <div id="compTabla" style="overflow-x:auto"></div>
+  <h3 style="margin-top:16px;font-size:13.5px">➕ Cargar respuesta recibida (proveedor o sitio)</h3>
+  <div class="fila">
+    <div class="campo" style="flex:1.4;min-width:160px"><label>Origen</label><input id="cmpOrigen" list="dlOrigenes" placeholder="Proveedor o sitio"><datalist id="dlOrigenes"></datalist></div>
+    <div class="campo" style="flex:1"><label>Precio ($)</label><input id="cmpPrecio" type="number" min="0"></div>
+    <div class="campo" style="flex:1"><label>Envío ($)</label><input id="cmpEnvio" type="number" min="0" value="0"></div>
+    <div class="campo" style="flex:1"><label>Desc. (%)</label><input id="cmpDesc" type="number" min="0" max="100" value="0"></div>
+    <div class="campo" style="flex:1"><label>Plazo (días)</label><input id="cmpPlazo" type="number" min="0" value="5"></div>
+    <div class="campo" style="flex:1"><label>Calif. (1-5)</label><input id="cmpCalif" type="number" min="1" max="5" step="0.1" value="4"></div>
+    <div class="campo" style="flex:1"><label>Forma de pago</label>
+      <select id="cmpPago"><option>Contado</option><option>30 días</option><option>60 días</option><option>90 días</option><option>3 cuotas</option><option>6 cuotas</option><option>12 cuotas</option></select>
+    </div>
+    <button class="btn" onclick="agregarRespuesta()">Agregar</button>
+  </div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgComp.close()">Cerrar</button>
+  </div>
+</dialog>
+
+<!-- Diálogo artículo de stock -->
+<dialog id="dlgArticulo">
+  <h3>Artículo de stock</h3>
+  <input type="hidden" id="artId">
+  <div class="campo"><label>Nombre</label><input id="artNombre"></div>
+  <div class="campo"><label>Categoría</label><input id="artCategoria"></div>
+  <div class="fila">
+    <div class="campo" style="flex:1"><label>Cantidad actual</label><input id="artCantidad" type="number" min="0" value="0"></div>
+    <div class="campo" style="flex:1"><label>Stock mínimo</label><input id="artMinimo" type="number" min="0" value="1"></div>
+  </div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgArticulo.close()">Cancelar</button>
+    <button class="btn" onclick="guardarArticulo()">Guardar</button>
+  </div>
+</dialog>
+
+<!-- Diálogo movimiento de stock -->
+<dialog id="dlgMov">
+  <h3 id="movTitulo">Movimiento de stock</h3>
+  <input type="hidden" id="movArtId"><input type="hidden" id="movTipo">
+  <div class="fila">
+    <div class="campo" style="flex:1"><label>Cantidad</label><input id="movCant" type="number" min="1" value="1"></div>
+  </div>
+  <div class="campo"><label>Referencia (sector destino / observación)</label><input id="movRef" placeholder="Ej.: Administración"></div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgMov.close()">Cancelar</button>
+    <button class="btn" onclick="guardarMov()">Registrar</button>
+  </div>
+</dialog>
+
+<!-- Diálogo ingreso de pedidos por email -->
+<dialog id="dlgPedidos" style="max-width:700px">
+  <h3>📥 Ingreso automático de pedidos recibidos por email</h3>
+  <div class="nota">Pegá el contenido de los mails recibidos en <b id="lblMailPedidos">la casilla configurada</b>. Se detectan automáticamente los campos de cada pedido (podés pegar varios juntos). Formato esperado:<br>
+  <code>Sector: Administración · Solicitante: Juan Pérez · Producto: Resmas A4 · Cantidad: 10</code> (cada campo en su línea)</div>
+  <div class="campo"><label>Texto de los emails</label>
+    <textarea id="pedTexto" rows="10" placeholder="Sector: Administración&#10;Solicitante: Juan Pérez&#10;Producto: Resmas papel A4&#10;Cantidad: 10&#10;&#10;Sector: Sistemas&#10;Solicitante: M. Pérez&#10;Producto: Mouse inalámbrico&#10;Cantidad: 5"></textarea>
+  </div>
+  <div id="pedResultado"></div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgPedidos.close()">Cerrar</button>
+    <button class="btn verde" onclick="procesarPedidos()">⚙️ Procesar e ingresar solicitudes</button>
+  </div>
+</dialog>
+
+<!-- Diálogo recepción de compra -->
+<dialog id="dlgRecibir">
+  <h3 id="recTitulo">Recibir compra</h3>
+  <input type="hidden" id="recSolId">
+  <div id="recInfo" class="nota"></div>
+  <div class="campo"><label>Artículo de stock (se crea si no existe)</label><input id="recArticulo" list="dlArticulos"><datalist id="dlArticulos"></datalist></div>
+  <div class="campo"><label>Cantidad recibida (total o parcial)</label><input id="recCant" type="number" min="1" value="1"></div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgRecibir.close()">Cancelar</button>
+    <button class="btn verde" onclick="confirmarRecepcion()">📦 Registrar ingreso</button>
+  </div>
+</dialog>
+
+<!-- Diálogo solicitud de cotización (email / WhatsApp) -->
+<dialog id="dlgMail" style="max-width:660px">
+  <h3>Solicitud de cotización</h3>
+  <div class="campo"><label>Proveedores destinatarios</label><div id="mailProvs" style="max-height:140px;overflow-y:auto;border:1px solid var(--borde);border-radius:6px;padding:8px"></div></div>
+  <div class="campo"><label>Asunto (email)</label><input id="mailAsunto"></div>
+  <div class="campo"><label>Mensaje</label><textarea id="mailCuerpo" rows="9"></textarea></div>
+  <div id="wspZona"></div>
+  <div class="fila" style="justify-content:flex-end;margin-top:14px">
+    <button class="btn sec" onclick="dlgMail.close()">Cancelar</button>
+    <button class="btn sec" onclick="copiarMail()">Copiar texto</button>
+    <button class="btn" style="background:#25d366" onclick="generarWsp()">💬 Enviar por WhatsApp</button>
+    <button class="btn verde" onclick="enviarMail()">✉️ Abrir en mi correo</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ================== ESTADO Y PERSISTENCIA ================== */
+const LS_KEY = "gestionComprasV1";
+let state = null;
+let charts = {};
+let nivelBusqueda = 1;
+
+function datosEjemplo(){
+  const provs = [
+    {id:1, nombre:"Distribuidora Norte SRL", rubro:"Insumos de oficina", email:"ventas@distrinorte.com.ar", whatsapp:"5491133445566", calificacion:4.5, plazoDias:5, costoEnvio:15000},
+    {id:2, nombre:"TecnoSur SA", rubro:"Informática y tecnología", email:"cotizaciones@tecnosur.com.ar", whatsapp:"5491144556677", calificacion:4.2, plazoDias:7, costoEnvio:25000},
+    {id:3, nombre:"Papelera Central", rubro:"Papelería", email:"pedidos@papeleracentral.com.ar", whatsapp:"", calificacion:4.8, plazoDias:3, costoEnvio:8000},
+    {id:4, nombre:"Limpieza Total SRL", rubro:"Artículos de limpieza", email:"ventas@limpiezatotal.com.ar", whatsapp:"5491155667788", calificacion:3.9, plazoDias:4, costoEnvio:10000},
+    {id:5, nombre:"Ferretería Industrial Oeste", rubro:"Ferretería e industria", email:"info@ferroeste.com.ar", whatsapp:"", calificacion:4.0, plazoDias:6, costoEnvio:12000}
+  ];
+  const prods = [
+    ["Notebook 15.6 pulgadas Core i5 8GB RAM 256GB SSD","Tecnología",2,985000,10],
+    ["Notebook 14 pulgadas Core i3 8GB RAM","Tecnología",2,742000],
+    ["Monitor LED 24 pulgadas Full HD","Tecnología",2,265000],
+    ["Mouse inalámbrico USB","Tecnología",2,18500],
+    ["Teclado inalámbrico español","Tecnología",2,32000],
+    ["Impresora multifunción láser","Tecnología",2,689000],
+    ["Toner negro compatible","Tecnología",2,45000],
+    ["Resma papel A4 75g x500 hojas","Papelería",3,7800,5],
+    ["Resma papel A4 75g x500 hojas","Papelería",1,8200],
+    ["Resma papel oficio 75g","Papelería",3,9100],
+    ["Biromes azules x50 unidades","Papelería",3,15600],
+    ["Cuaderno tapa dura 92 hojas","Papelería",3,4200],
+    ["Carpetas colgantes x25","Papelería",1,21000],
+    ["Silla ergonómica de oficina con apoyabrazos","Mobiliario",1,285000],
+    ["Silla de oficina básica","Mobiliario",1,145000],
+    ["Escritorio operativo 1.20m","Mobiliario",1,198000],
+    ["Detergente concentrado 5L","Limpieza",4,12800,8],
+    ["Lavandina 5L","Limpieza",4,6900],
+    ["Papel higiénico institucional x8","Limpieza",4,14500],
+    ["Bobina papel secamanos","Limpieza",4,9800],
+    ["Guantes de nitrilo x100","Limpieza",4,16700],
+    ["Alcohol etílico 70% 1L","Limpieza",4,4300],
+    ["Taladro percutor 750W","Ferretería",5,132000],
+    ["Juego de destornilladores x12","Ferretería",5,28900],
+    ["Cinta métrica 8m","Ferretería",5,8600],
+    ["Casco de seguridad","Seguridad",5,19500],
+    ["Zapatos de seguridad punta de acero","Seguridad",5,89000],
+    ["Matafuego ABC 5kg","Seguridad",5,74000]
+  ].map((p,i)=>({id:i+1, nombre:p[0], categoria:p[1], proveedorId:p[2], precio:p[3], descuento:p[4]||0, origen:"ejemplo"}));
+  const hoy = new Date();
+  const f = (m,d)=>{ const dt=new Date(hoy.getFullYear(),hoy.getMonth()-m,d); return dt.toISOString().slice(0,10); };
+  const sols = [
+    {id:1,fecha:f(5,10),sector:"Administración",solicitante:"L. Gómez",producto:"Resmas papel A4 x20",cantidad:20,monto:156000,estado:"Recibida",fechaEntrega:f(5,16)},
+    {id:2,fecha:f(5,18),sector:"Sistemas",solicitante:"M. Pérez",producto:"Notebook Core i5",cantidad:2,monto:1970000,estado:"Recibida",fechaEntrega:f(5,29)},
+    {id:3,fecha:f(4,5),sector:"Producción",solicitante:"J. Díaz",producto:"Guantes de nitrilo",cantidad:10,monto:167000,estado:"Recibida",fechaEntrega:f(4,10)},
+    {id:4,fecha:f(4,22),sector:"RRHH",solicitante:"A. Torres",producto:"Sillas ergonómicas",cantidad:4,monto:1140000,estado:"Aprobada",fechaPrometida:f(0,20)},
+    {id:5,fecha:f(3,3),sector:"Logística",solicitante:"C. Ruiz",producto:"Zapatos de seguridad",cantidad:8,monto:712000,estado:"Recibida",fechaEntrega:f(3,12)},
+    {id:6,fecha:f(3,15),sector:"Administración",solicitante:"L. Gómez",producto:"Toner impresoras",cantidad:6,monto:270000,estado:"Cotizada",cotRecibidas:[
+      {origen:"TecnoSur SA",precio:45000,envio:5000,descuento:10,plazoDias:7,calificacion:4.2,pago:"3 cuotas"},
+      {origen:"Distribuidora Norte SRL",precio:47000,envio:0,descuento:5,plazoDias:5,calificacion:4.5,pago:"30 días"},
+      {origen:"Mercado Libre",precio:43500,envio:6500,descuento:0,plazoDias:3,calificacion:4.7,pago:"Contado"}
+    ]},
+    {id:7,fecha:f(2,8),sector:"Sistemas",solicitante:"M. Pérez",producto:"Monitores 24 pulgadas",cantidad:5,monto:1325000,estado:"Aprobada"},
+    {id:8,fecha:f(2,20),sector:"Producción",solicitante:"J. Díaz",producto:"Matafuegos ABC",cantidad:3,monto:222000,estado:"Cotizada"},
+    {id:9,fecha:f(1,4),sector:"Mantenimiento",solicitante:"R. Sosa",producto:"Taladro percutor",cantidad:1,monto:132000,estado:"Pendiente"},
+    {id:10,fecha:f(1,12),sector:"Administración",solicitante:"S. Vega",producto:"Artículos de limpieza mensuales",cantidad:1,monto:98000,estado:"Cotizada"},
+    {id:11,fecha:f(0,2),sector:"Sistemas",solicitante:"M. Pérez",producto:"Teclados y mouse inalámbricos",cantidad:10,monto:505000,estado:"Pendiente"},
+    {id:12,fecha:f(0,5),sector:"RRHH",solicitante:"A. Torres",producto:"Escritorio operativo",cantidad:2,monto:396000,estado:"Pendiente"}
+  ];
+  return {
+    proveedores: provs,
+    productos: prods,
+    solicitudes: sols,
+    sectores: ["Administración","Sistemas","Producción","Logística","RRHH","Mantenimiento"],
+    sitios: [
+      {nombre:"Mercado Libre", url:"https://listado.mercadolibre.com.ar/{q}", activo:true, calificacion:4.7},
+      {nombre:"Google Shopping", url:"https://www.google.com/search?tbm=shop&q={q}", activo:true, calificacion:4.3}
+    ],
+    ofertasWeb: [
+      {id:1, fuente:"Mercado Libre", producto:"Notebook 15.6 pulgadas Core i5 16GB 512GB SSD", precio:920000, envio:0, descuento:5, plazoDias:3, calificacion:4.7, url:""}
+    ],
+    pesos: {costo:50, plazo:25, calif:25},
+    ipc: 2.1,
+    mlAuto: true,
+    mlCred: {clientId:"", clientSecret:""},
+    mailPedidos: "",
+    stock: [
+      {id:1, nombre:"Resma papel A4 75g x500 hojas", categoria:"Papelería", cantidad:35, minimo:20, ultCompra:f(1,10)},
+      {id:2, nombre:"Toner negro compatible", categoria:"Tecnología", cantidad:2, minimo:4, ultCompra:f(2,20)},
+      {id:3, nombre:"Detergente concentrado 5L", categoria:"Limpieza", cantidad:6, minimo:5, ultCompra:f(0,15)},
+      {id:4, nombre:"Guantes de nitrilo x100", categoria:"Limpieza", cantidad:1, minimo:3, ultCompra:f(4,8)},
+      {id:5, nombre:"Biromes azules x50 unidades", categoria:"Papelería", cantidad:8, minimo:2, ultCompra:f(3,1)}
+    ],
+    movStock: [
+      {id:1, fecha:f(1,10), stockId:1, tipo:"ingreso", cantidad:20, ref:"Solicitud N° 1"},
+      {id:2, fecha:f(0,20), stockId:1, tipo:"egreso", cantidad:5, ref:"Administración"},
+      {id:3, fecha:f(0,25), stockId:3, tipo:"egreso", cantidad:2, ref:"Mantenimiento"}
+    ],
+    empresa: "Mi Empresa"
+  };
+}
+
+function guardar(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){} }
+function cargar(){
+  try{ const s = localStorage.getItem(LS_KEY); if(s){ state = JSON.parse(s); migrar(); return; } }catch(e){}
+  state = datosEjemplo();
+}
+function migrar(){ // compatibilidad con datos guardados por versiones anteriores
+  state.ofertasWeb = state.ofertasWeb || [];
+  state.pesos = state.pesos || {costo:50, plazo:25, calif:25};
+  state.proveedores.forEach(p=>{
+    if(p.calificacion==null) p.calificacion = 3.5;
+    if(p.plazoDias==null) p.plazoDias = 5;
+    if(p.costoEnvio==null) p.costoEnvio = 0;
+    if(p.whatsapp==null) p.whatsapp = "";
+  });
+  state.solicitudes.forEach(s=>{ s.cotRecibidas = s.cotRecibidas || []; });
+  state.sitios.forEach(s=>{ if(s.calificacion==null) s.calificacion = 4.5; });
+  state.stock = state.stock || [];
+  state.movStock = state.movStock || [];
+  if(state.ipc==null) state.ipc = 2.0;
+  if(state.mlAuto==null) state.mlAuto = true;
+  state.mlCred = state.mlCred || {clientId:"", clientSecret:""};
+  if(state.mailPedidos==null) state.mailPedidos = "";
+}
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("on");
+  setTimeout(()=>t.classList.remove("on"), 2600);
+}
+function fmt(n){ return "$ " + Number(n||0).toLocaleString("es-AR",{maximumFractionDigits:0}); }
+function nextId(arr){ return arr.length ? Math.max(...arr.map(x=>x.id))+1 : 1; }
+function provDe(id){ return state.proveedores.find(p=>p.id===id); }
+
+/* ============ MOTOR DE "COMPRA EFICIENTE" ============ */
+function costoFinal(o){ return (o.precio * (1 - (o.descuento||0)/100)) + (o.envio||0); }
+function valorPresente(monto, pago){
+  // descuenta pagos futuros por la inflación mensual (IPC): cuánto vale hoy lo que se pagará mañana
+  const i = (Number(state.ipc)||0)/100;
+  if(!pago || pago==="Contado" || i<=0) return monto;
+  const en = n => monto/Math.pow(1+i, n);
+  if(pago==="30 días") return en(1);
+  if(pago==="60 días") return en(2);
+  if(pago==="90 días") return en(3);
+  const m = String(pago).match(/^(\d+) cuotas$/);
+  if(m){ const n = +m[1]; let vp = 0; for(let k=1;k<=n;k++) vp += (monto/n)/Math.pow(1+i, k); return vp; }
+  return monto;
+}
+function puntuar(ops){
+  if(!ops.length) return ops;
+  ops.forEach(o=>{ o.costoFinal = costoFinal(o); o.vp = valorPresente(o.costoFinal, o.pago); });
+  const cmin = Math.min(...ops.map(o=>o.vp));
+  const plazos = ops.map(o=>o.plazoDias||0).filter(p=>p>0);
+  const pmin = plazos.length ? Math.min(...plazos) : 0;
+  const w = state.pesos || {costo:50, plazo:25, calif:25};
+  const wTot = (w.costo+w.plazo+w.calif) || 100;
+  ops.forEach(o=>{
+    const sCosto = o.vp>0 ? cmin/o.vp : 1;
+    const sPlazo = (o.plazoDias>0 && pmin>0) ? pmin/o.plazoDias : 0.5;
+    const sCal = Math.min((o.calificacion||3)/5, 1);
+    o.score = Math.round((sCosto*w.costo + sPlazo*w.plazo + sCal*w.calif)/wTot*100);
+  });
+  return ops.sort((a,b)=>b.score-a.score || a.vp-b.vp);
+}
+function diasEntre(f1, f2){
+  if(!f1 || !f2) return null;
+  return Math.max(0, Math.round((new Date(f2+"T00:00:00") - new Date(f1+"T00:00:00"))/86400000));
+}
+function diasDesde(f){ return f ? Math.max(0, Math.round((Date.now() - new Date(f+"T00:00:00").getTime())/86400000)) : null; }
+function hoyISO(){ return new Date().toISOString().slice(0,10); }
+
+/* ============ WHATSAPP WEB ============ */
+function linkWsp(tel, texto){
+  const t = String(tel||"").replace(/\D/g,"");
+  return "https://web.whatsapp.com/send?phone=" + t + "&text=" + encodeURIComponent(texto);
+}
+function textoWsp(provNombre, producto){
+  return "Hola " + provNombre + ", le escribimos de " + (state.empresa||"nuestra empresa") + " (Área de Compras).\n\n" +
+    "Queremos solicitar cotización de:\n• Producto: " + (producto||"[completar]") + "\n• Cantidad: [completar]\n\n" +
+    "Por favor indicar precio, forma de pago, plazo de entrega y validez de la oferta. ¡Muchas gracias!";
+}
+function wspDirecto(provId2, producto){
+  const p = provDe(provId2);
+  if(!p || !p.whatsapp){ toast("El proveedor no tiene WhatsApp cargado"); return; }
+  window.open(linkWsp(p.whatsapp, textoWsp(p.nombre, producto)), "_blank");
+  toast("Abriendo WhatsApp Web con el mensaje listo...");
+}
+/* ============ BÚSQUEDA AUTOMÁTICA EN SITIO PREDETERMINADO (MERCADO LIBRE) ============ */
+let mlAviso = "";
+const cacheML = {};
+async function fetchTexto(url, ms, headers){
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), ms||10000);
+  try{
+    const r = await fetch(url, {signal:ctl.signal, headers: headers||{}});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+async function tokenML(){
+  const c = state.mlCred || {};
+  if(!c.clientId || !c.clientSecret) return null;
+  if(state.mlToken && state.mlToken.exp > Date.now() + 60000) return state.mlToken.token;
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), 9000);
+  try{
+    const r = await fetch("https://api.mercadolibre.com/oauth/token", {
+      method:"POST", signal:ctl.signal,
+      headers:{"Content-Type":"application/x-www-form-urlencoded", "Accept":"application/json"},
+      body:"grant_type=client_credentials&client_id="+encodeURIComponent(c.clientId)+"&client_secret="+encodeURIComponent(c.clientSecret)
+    });
+    if(!r.ok) throw new Error("token HTTP "+r.status);
+    const d = await r.json();
+    state.mlToken = {token:d.access_token, exp: Date.now() + ((d.expires_in||21600)-300)*1000};
+    guardar();
+    return state.mlToken.token;
+  } finally { clearTimeout(t); }
+}
+function mapApiML(d){
+  return (d.results||[]).filter(x=>x.price>0).map(x=>{
+    // cuotas sin interés detectadas → mejoran el valor presente en el cálculo de conveniencia
+    let pago = "Contado";
+    if(x.installments && Number(x.installments.rate)===0){
+      const n = x.installments.quantity;
+      if(n>=12) pago = "12 cuotas"; else if(n>=6) pago = "6 cuotas"; else if(n>=3) pago = "3 cuotas";
+    }
+    return {nombre:x.title, precio:x.price, url:x.permalink||"",
+      envioGratis:!!(x.shipping && x.shipping.free_shipping), pago};
+  });
+}
+async function guardarCredML(){
+  state.mlCred = {clientId: mlAppId.value.trim(), clientSecret: mlSecret.value.trim()};
+  state.mlToken = null;
+  guardar();
+  const est = document.getElementById("mlEstado");
+  if(!state.mlCred.clientId || !state.mlCred.clientSecret){
+    est.innerHTML = "Ingresá App ID y Secret Key."; return;
+  }
+  est.innerHTML = "⏳ Probando conexión con Mercado Libre...";
+  try{
+    const tk = await tokenML();
+    const d = JSON.parse(await fetchTexto("https://api.mercadolibre.com/sites/MLA/search?q=notebook&limit=1", 9000, {Authorization:"Bearer "+tk}));
+    if(!d.results) throw new Error("respuesta inesperada");
+    est.innerHTML = "✅ <b>Conexión oficial activa.</b> La búsqueda automática usa la API de Mercado Libre con tus credenciales.";
+    Object.keys(cacheML).forEach(k=>delete cacheML[k]);
+    toast("Mercado Libre conectado correctamente");
+  }catch(e){
+    est.innerHTML = "⚠️ No se pudo conectar ("+e.message+"). Verificá App ID y Secret Key, y que la aplicación esté activa en developers.mercadolibre.com.ar.";
+  }
+}
+function renderML(){
+  const mp = document.getElementById("mailPedidosInput");
+  if(mp) mp.value = state.mailPedidos || "";
+  const a = document.getElementById("mlAppId");
+  if(!a) return;
+  const c = state.mlCred||{};
+  a.value = c.clientId||"";
+  document.getElementById("mlSecret").value = c.clientSecret||"";
+  if(c.clientId && c.clientSecret)
+    document.getElementById("mlEstado").innerHTML = "🔗 Credenciales cargadas. La búsqueda automática usa la vía oficial"+(state.mlToken && state.mlToken.exp>Date.now() ? " (token vigente)." : " (el token se renueva solo al buscar).");
+}
+function decodificarHtml(s){
+  const d = document.createElement("textarea"); d.innerHTML = s; return d.value;
+}
+function parseListadoML(html){
+  const out = [];
+  // Vía 1: bloques JSON-LD (datos estructurados que ML incluye en la página de resultados)
+  const re = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
+  let m;
+  while((m = re.exec(html))){
+    try{
+      const j = JSON.parse(m[1]);
+      const items = (j["@type"]==="ItemList" && j.itemListElement)
+        ? j.itemListElement.map(e=>e.item||e)
+        : (j["@type"]==="Product" ? [j] : []);
+      items.forEach(p=>{
+        const of = p.offers||{};
+        const precio = Number(of.price || of.lowPrice || 0);
+        if(p.name && precio>0) out.push({nombre:String(p.name), precio, url:p.url||of.url||""});
+      });
+    }catch(e){}
+  }
+  if(out.length) return out;
+  // Vía 2 (respaldo): títulos y precios del HTML del listado
+  const titulos = [...html.matchAll(/class="ui-search-item__title[^"]*"[^>]*>([^<]{5,150})</g)].map(x=>decodificarHtml(x[1]));
+  const precios = [...html.matchAll(/class="andes-money-amount__fraction"[^>]*>([\d.]{1,15})</g)]
+    .map(x=>Number(x[1].replace(/\./g,"")));
+  for(let i=0; i<titulos.length && i<precios.length; i++){
+    if(precios[i]>0) out.push({nombre:titulos[i], precio:precios[i], url:""});
+  }
+  return out;
+}
+async function buscarML(q){
+  mlAviso = "";
+  if(state.mlAuto===false) return [];
+  const sitio = state.sitios.find(s=>s.activo && /mercado\s*libre|mercadolibre/i.test(s.nombre+" "+s.url));
+  if(!sitio) return [];
+  // caché por búsqueda y nivel (evita consultas repetidas en la misma sesión)
+  const clave = normalizar(q)+"|"+nivelBusqueda+"|"+(state.ipc||0);
+  if(cacheML[clave]) return cacheML[clave];
+  let brutos = [];
+  let viaOficial = false;
+  // Vía A: API oficial con credenciales propias (la más confiable)
+  try{
+    const tk = await tokenML();
+    if(tk){
+      const d = JSON.parse(await fetchTexto("https://api.mercadolibre.com/sites/MLA/search?q="+encodeURIComponent(q)+"&limit=25", 9000, {Authorization:"Bearer "+tk}));
+      brutos = mapApiML(d);
+      viaOficial = true;
+    }
+  }catch(e){ state.mlToken = null; }
+  // Vía B: API sin autenticación (por si ML la vuelve a abrir)
+  if(!brutos.length){
+    try{
+      const d = JSON.parse(await fetchTexto("https://api.mercadolibre.com/sites/MLA/search?q="+encodeURIComponent(q)+"&limit=25", 8000));
+      brutos = mapApiML(d);
+    }catch(e){}
+  }
+  // Vía C: página pública de resultados a través de proxies CORS
+  if(!brutos.length){
+    const listado = "https://listado.mercadolibre.com.ar/" + encodeURIComponent(q).replace(/%20/g,"-");
+    const proxies = [
+      u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
+      u => "https://corsproxy.io/?url=" + encodeURIComponent(u)
+    ];
+    for(const prox of proxies){
+      try{
+        const html = await fetchTexto(prox(listado), 15000);
+        brutos = parseListadoML(html);
+        if(brutos.length){ brutos.forEach(b=>{ if(!b.url) b.url = listado; }); break; }
+      }catch(e){}
+    }
+  }
+  if(!brutos.length){
+    mlAviso = "🔎 No se pudo consultar "+sitio.nombre+" automáticamente. "+
+      ((state.mlCred&&state.mlCred.clientId) ? "Revisá la conexión oficial en Configuración." : "Para una conexión 100% estable, cargá credenciales oficiales en Configuración → 🔗 Conexión con Mercado Libre.");
+    return [];
+  }
+  // filtro de relevancia según el nivel de búsqueda (mismo criterio que el catálogo)
+  const palabras = normalizar(q).split(/\s+/).filter(Boolean);
+  const frase = normalizar(q);
+  const relevante = o => {
+    const t = normalizar(o.nombre);
+    if(nivelBusqueda===3) return t.includes(frase);
+    if(nivelBusqueda===2) return palabras.every(w=>t.includes(w));
+    return palabras.some(w=>t.includes(w));
+  };
+  let filtrados = brutos.filter(relevante);
+  // en nivel general, si hay suficientes resultados que contienen TODAS las palabras, se prefieren (más precisión)
+  if(nivelBusqueda===1){
+    const estrictos = filtrados.filter(o=>palabras.every(w=>normalizar(o.nombre).includes(w)));
+    if(estrictos.length>=2) filtrados = estrictos;
+  }
+  if(!filtrados.length) filtrados = brutos;
+  const cands = filtrados.slice(0,20).map(x=>({
+    tipo:"Sitio web", auto:true, origen:sitio.nombre+(viaOficial?"":" (vía alternativa)"), nombre:x.nombre, precio:x.precio,
+    descuento:0, envio:0, envioDesconocido:!x.envioGratis,
+    plazoDias:3, calificacion:sitio.calificacion||4.5, pago:x.pago||"Contado", url:x.url
+  }));
+  // se eligen las 2 mejores alternativas según los criterios de compra eficiente (costo VP + plazo + calificación)
+  const res = puntuar(cands).slice(0,2);
+  cacheML[clave] = res;
+  return res;
+}
+
+/* ================== NAVEGACIÓN ================== */
+document.querySelectorAll("nav button").forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("act"));
+    document.querySelectorAll("main section").forEach(x=>x.classList.remove("act"));
+    b.classList.add("act");
+    document.getElementById("sec-"+b.dataset.sec).classList.add("act");
+    if(b.dataset.sec==="dashboard") renderDashboard();
+    if(b.dataset.sec==="stock") renderStock();
+  };
+});
+document.querySelectorAll("#niveles button").forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll("#niveles button").forEach(x=>x.classList.remove("act"));
+    b.classList.add("act");
+    nivelBusqueda = Number(b.dataset.n);
+  };
+});
+
+/* ================== BÚSQUEDA POR NIVELES ================== */
+function normalizar(s){
+  return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+}
+async function buscar(){
+  const q = document.getElementById("qBusqueda").value.trim();
+  const out = document.getElementById("resBusqueda");
+  if(!q){ out.innerHTML = '<div class="card vacio">Ingresá una o más palabras clave.</div>'; return; }
+  out.innerHTML = '<div class="card vacio">🔎 Buscando en catálogo de proveedores y sitios configurados...</div>';
+  const palabras = normalizar(q).split(/\s+/).filter(Boolean);
+  const frase = normalizar(q);
+
+  const coincide = (prod)=>{
+    const texto = normalizar(prod.nombre + " " + (prod.categoria||""));
+    if(nivelBusqueda===1) return palabras.some(p=>texto.includes(p));
+    if(nivelBusqueda===2) return palabras.every(p=>texto.includes(p));
+    return texto.includes(frase);
+  };
+
+  // puntaje para ordenar: más palabras coincidentes primero, luego menor precio
+  const resultados = state.productos.filter(coincide).map(p=>{
+    const texto = normalizar(p.nombre);
+    const hits = palabras.filter(w=>texto.includes(w)).length;
+    return {...p, hits};
+  }).sort((a,b)=> b.hits - a.hits || a.precio - b.precio);
+
+  // opciones de compra: catálogo de proveedores + ofertas registradas de sitios masivos
+  let opciones = resultados.map(p=>{
+    const pv = provDe(p.proveedorId)||{};
+    return {tipo:"Proveedor", origen:pv.nombre||"Proveedor", provId:pv.id, email:pv.email, wsp:pv.whatsapp||"",
+      nombre:p.nombre, precio:p.precio, descuento:p.descuento||0, envio:pv.costoEnvio||0,
+      plazoDias:pv.plazoDias||0, calificacion:pv.calificacion||3};
+  });
+  (state.ofertasWeb||[]).forEach(o=>{
+    if(coincide({nombre:o.producto, categoria:o.fuente}))
+      opciones.push({tipo:"Sitio web", origen:o.fuente, nombre:o.producto, precio:o.precio,
+        descuento:o.descuento||0, envio:o.envio||0, plazoDias:o.plazoDias||0, calificacion:o.calificacion||4, pago:o.pago||"Contado", url:o.url||""});
+  });
+  // 2 mejores alternativas del sitio predeterminado (búsqueda automática)
+  const autoML = await buscarML(q);
+  opciones.push(...autoML);
+  opciones = puntuar(opciones);
+  const cots = opciones.slice(0,3);
+
+  const nivelTxt = {1:"General",2:"Intermedio",3:"Específico"}[nivelBusqueda];
+  let html = '<div class="card"><h2>Resultados para "'+q+'" · Nivel '+nivelBusqueda+' ('+nivelTxt+')</h2>';
+
+  if(cots.length===0){
+    html += '<div class="vacio">No se encontraron opciones en las listas de proveedores ni en ofertas web registradas.'+
+      (nivelBusqueda>1 ? ' Probá con el nivel <b>General</b> para ampliar la búsqueda.' : ' Importá listas de precios, registrá ofertas de sitios o usá los enlaces de abajo.')+'</div>';
+  } else {
+    html += '<p style="color:var(--texto-sec);font-size:13px">'+opciones.length+' opción/es evaluadas por <b>costo final</b> (precio − descuento + envío), <b>plazo de entrega</b> y <b>calificación</b>. Las 3 mejores:</p><div class="cots">';
+    cots.forEach((c,i)=>{
+      html += '<div class="cot'+(i===0?' mejor':'')+'">'+
+        '<span class="pos">'+(i===0?'⭐ COMPRA EFICIENTE':'Opción '+(i+1))+'</span>'+
+        '<div style="margin-top:8px;font-weight:600">'+c.nombre+'</div>'+
+        '<div class="precio">'+fmt(c.costoFinal)+' <span class="mini">costo final</span></div>'+
+        '<div class="prov">'+(c.tipo==="Sitio web"?"🌐 ":"🏭 ")+c.origen+(c.auto?' <span class="mini">🔎 encontrado automáticamente</span>':'')+'</div>'+
+        '<div class="det">Precio '+fmt(c.precio)+(c.descuento?' · Desc. '+c.descuento+'%':'')+' · Envío '+(c.envioDesconocido?'s/d':(c.envio?fmt(c.envio):'gratis'))+
+          (c.pago&&c.pago!=="Contado"?' · Pago: '+c.pago+' (vale hoy '+fmt(c.vp)+')':'')+
+          '<br>Entrega: '+(c.plazoDias?c.plazoDias+' días':'s/d')+' · ⭐ '+c.calificacion+'/5 · Puntaje <span class="score">'+c.score+'/100</span></div>'+
+        (c.email?'<button class="btn chico verde" onclick="mailCotizacion(['+c.provId+'],\''+c.nombre.replace(/'/g,"\\'")+'\')">✉️ Pedir cotización</button> ':'')+
+        (c.wsp?'<button class="btn chico verde" style="background:#25d366" title="WhatsApp Web" onclick="wspDirecto('+c.provId+',\''+c.nombre.replace(/'/g,"\\'")+'\')">💬 WhatsApp</button> ':'')+
+        (c.url?'<a class="btn chico sec" style="text-decoration:none" href="'+c.url+'" target="_blank" rel="noopener">Ver publicación</a>':'')+
+        '</div>';
+    });
+    html += '</div>';
+    if(opciones.length>3){
+      html += '<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:600;color:var(--azul)">Ver comparativo completo ('+opciones.length+' opciones)</summary><div style="overflow-x:auto;margin-top:8px"><table><thead><tr><th>Opción</th><th>Origen</th><th>Precio</th><th>Desc.</th><th>Envío</th><th>Costo final</th><th>Plazo</th><th>Calif.</th><th>Puntaje</th></tr></thead><tbody>'+
+        opciones.map((r,i)=>'<tr'+(i===0?' class="mejor-fila"':'')+'><td>'+(r.url?'<a href="'+r.url+'" target="_blank" rel="noopener">'+r.nombre+'</a>':r.nombre)+(i===0?' <b>⭐</b>':'')+'</td><td>'+r.origen+(r.auto?' 🔎':'')+'</td><td>'+fmt(r.precio)+'</td><td>'+(r.descuento||0)+'%</td><td>'+(r.envioDesconocido?'s/d':fmt(r.envio))+'</td><td><b>'+fmt(r.costoFinal)+'</b></td><td>'+(r.plazoDias?r.plazoDias+' d':'—')+'</td><td>'+r.calificacion+'</td><td class="score">'+r.score+'</td></tr>').join("")+
+        '</tbody></table></div></details>';
+    }
+    const provsConMail = [...new Set(cots.filter(c=>c.provId&&c.email).map(c=>c.provId))];
+    if(provsConMail.length>1){
+      html += '<div style="margin-top:14px"><button class="btn verde" onclick="mailCotizacion(['+provsConMail.join(",")+'],\''+q.replace(/'/g,"\\'")+'\')">✉️ Pedir cotización a los '+provsConMail.length+' proveedores</button></div>';
+    }
+  }
+  html += '</div>';
+
+  // enlaces a sitios de compra masiva
+  const sitiosAct = state.sitios.filter(s=>s.activo);
+  if(sitiosAct.length){
+    html += '<div class="card"><h3>🌐 Buscar precios de referencia en sitios de compra masiva</h3>'+
+      (mlAviso?'<div class="nota">'+mlAviso+'</div>':'')+
+      '<p style="color:var(--texto-sec);font-size:12.5px">Abrí la búsqueda directamente en cada sitio configurado para comparar con precios de mercado:</p>'+
+      '<div class="sitios-links">'+
+      sitiosAct.map(s=>{
+        const url = s.url.includes("{q}") ? s.url.replace("{q}", encodeURIComponent(q).replace(/%20/g,"-")) : s.url;
+        return '<a href="'+url+'" target="_blank" rel="noopener">🔗 '+s.nombre+' (⭐ '+(s.calificacion||"-")+')</a>';
+      }).join("")+'</div>'+
+      '<div style="margin-top:12px" class="mini">¿Encontraste una buena oferta en un sitio? Registrala para que compita en el comparativo: '+
+      '<button class="btn chico sec" onclick="abrirOferta()">➕ Registrar oferta de sitio web</button></div></div>';
+  }
+  out.innerHTML = html;
+}
+document.getElementById("qBusqueda").addEventListener("keydown", e=>{ if(e.key==="Enter") buscar(); });
+/* ================== IMPORTACIÓN DE LISTAS (CARPETA) ================== */
+async function importarArchivos(files){
+  const validos = [...files].filter(f=>/\.(csv|xlsx|xls|pdf)$/i.test(f.name));
+  const res = document.getElementById("resImport");
+  if(!validos.length){ res.innerHTML = '<div class="nota">No se encontraron archivos .csv/.xlsx/.xls/.pdf en la selección.</div>'; return; }
+  res.innerHTML = '<div class="nota">⏳ Procesando '+validos.length+' archivo/s...</div>';
+  let totalProds = 0, detalle = [];
+  for(const f of validos){
+    try{
+      const filas = await leerArchivo(f);
+      const n = procesarFilas(filas, f.name);
+      totalProds += n;
+      detalle.push("✅ <b>"+f.name+"</b>: "+n+" productos");
+    }catch(e){
+      detalle.push("⚠️ <b>"+f.name+"</b>: no se pudo leer ("+e.message+")");
+    }
+  }
+  guardar();
+  renderProveedores(); renderCatalogo(); llenarSelects();
+  res.innerHTML = '<div class="nota"><b>Importación finalizada:</b> '+totalProds+' productos incorporados de '+validos.length+' archivo/s.<br>'+detalle.join("<br>")+'</div>';
+  toast("Se importaron "+totalProds+" productos");
+}
+
+function leerArchivo(f){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onerror = ()=>reject(new Error("error de lectura"));
+    if(/\.pdf$/i.test(f.name)){
+      r.onload = async ()=>{
+        try{
+          if(typeof pdfjsLib === "undefined") throw new Error("librería PDF no cargada (requiere internet)");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          const pdf = await pdfjsLib.getDocument({data:new Uint8Array(r.result)}).promise;
+          const filas = [["producto","precio"]];
+          for(let p=1; p<=pdf.numPages; p++){
+            const tc = await (await pdf.getPage(p)).getTextContent();
+            // agrupar el texto por renglón según su coordenada vertical
+            const porY = {};
+            tc.items.forEach(it=>{
+              const y = Math.round(it.transform[5]);
+              (porY[y] = porY[y]||[]).push({x:it.transform[4], s:it.str});
+            });
+            Object.keys(porY).map(Number).sort((a,b)=>b-a).forEach(y=>{
+              const linea = porY[y].sort((a,b)=>a.x-b.x).map(t=>t.s).join(" ").replace(/\s+/g," ").trim();
+              // renglón válido: texto descriptivo + precio al final
+              const m = linea.match(/^(.*?)[\s.·_]*\$?\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)\s*$/);
+              if(m){
+                const nombre = m[1].replace(/[.·_\-\s]+$/,"").trim();
+                const tienePrecio = parseFloat(m[2].replace(/\./g,"").replace(",","."))>0;
+                if(nombre.length>=3 && /[a-záéíóúñ]/i.test(nombre) && tienePrecio) filas.push([nombre, m[2]]);
+              }
+            });
+          }
+          if(filas.length<=1) reject(new Error("no se detectaron renglones con producto y precio; si el PDF es una imagen escaneada, no tiene texto extraíble"));
+          else resolve(filas);
+        }catch(e){ reject(e); }
+      };
+      r.readAsArrayBuffer(f);
+    } else if(/\.csv$/i.test(f.name)){
+      r.onload = ()=>{
+        const txt = r.result;
+        const sep = (txt.split(";").length > txt.split(",").length) ? ";" : ",";
+        const filas = txt.split(/\r?\n/).filter(l=>l.trim()).map(l=>l.split(sep).map(c=>c.trim().replace(/^"|"$/g,"")));
+        resolve(filas);
+      };
+      r.readAsText(f, "utf-8");
+    } else {
+      r.onload = ()=>{
+        try{
+          const wb = XLSX.read(new Uint8Array(r.result), {type:"array"});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          resolve(XLSX.utils.sheet_to_json(ws, {header:1, defval:""}));
+        }catch(e){ reject(e); }
+      };
+      r.readAsArrayBuffer(f);
+    }
+  });
+}
+
+function procesarFilas(filas, nombreArchivo){
+  if(!filas.length) return 0;
+  const enc = filas[0].map(c=>normalizar(c));
+  const idx = (opciones)=>enc.findIndex(c=>opciones.some(o=>c.includes(o)));
+  let iProd = idx(["producto","descripcion","articulo","item","nombre","detalle"]);
+  let iPrecio = idx(["precio","importe","costo","valor","unitario"]);
+  let iCat = idx(["categoria","rubro","familia","tipo","linea"]);
+  let iProv = idx(["proveedor","empresa","vendedor"]);
+  let inicio = 1;
+  if(iProd===-1 || iPrecio===-1){ // sin encabezado: asumir col 0 = producto, primera numérica = precio
+    iProd = 0; iCat = -1; iProv = -1; inicio = 0;
+    const fila = filas[0];
+    iPrecio = fila.findIndex((c,i)=>i>0 && !isNaN(parseFloat(String(c).replace(/\./g,"").replace(",","."))));
+    if(iPrecio===-1) iPrecio = 1;
+  }
+  const nombreProvArchivo = nombreArchivo.replace(/\.(csv|xlsx|xls)$/i,"").replace(/[-_]/g," ").trim();
+  let n = 0;
+  for(let i=inicio;i<filas.length;i++){
+    const fila = filas[i];
+    const nombre = String(fila[iProd]||"").trim();
+    if(!nombre) continue;
+    let precio = String(fila[iPrecio]||"").replace(/[^0-9.,]/g,"");
+    if(precio.includes(",") && precio.includes(".")) precio = precio.replace(/\./g,"").replace(",",".");
+    else if(precio.includes(",")) precio = precio.replace(",",".");
+    precio = parseFloat(precio);
+    if(isNaN(precio) || precio<=0) continue;
+    const provNombre = (iProv>-1 && String(fila[iProv]).trim()) ? String(fila[iProv]).trim() : nombreProvArchivo;
+    let prov = state.proveedores.find(p=>normalizar(p.nombre)===normalizar(provNombre));
+    if(!prov){
+      prov = {id: nextId(state.proveedores), nombre: provNombre, rubro:"", email:""};
+      state.proveedores.push(prov);
+    }
+    // reemplazar si ya existe el mismo producto del mismo proveedor
+    const existente = state.productos.find(p=>p.proveedorId===prov.id && normalizar(p.nombre)===normalizar(nombre));
+    if(existente){ existente.precio = precio; if(iCat>-1) existente.categoria = String(fila[iCat]||existente.categoria); }
+    else {
+      state.productos.push({id: nextId(state.productos), nombre, categoria: iCat>-1?String(fila[iCat]||""):"", proveedorId: prov.id, precio, origen:"importado"});
+    }
+    n++;
+  }
+  return n;
+}
+
+function descargarPlantilla(){
+  const csv = "producto;categoria;precio;proveedor\nResma papel A4 75g x500;Papelería;8500;Papelera Ejemplo SA\nNotebook 15 pulgadas Core i5;Tecnología;950000;Tecno Ejemplo SRL\n";
+  descargarTexto(csv, "plantilla-lista-precios.csv", "text/csv");
+}
+function descargarTexto(contenido, nombre, tipo){
+  const blob = new Blob(["﻿"+contenido], {type: tipo+";charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = nombre; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ================== PROVEEDORES ================== */
+function renderProveedores(){
+  const tb = document.querySelector("#tProveedores tbody");
+  tb.innerHTML = state.proveedores.map(p=>{
+    const cnt = state.productos.filter(x=>x.proveedorId===p.id).length;
+    return "<tr><td><b>"+p.nombre+"</b></td><td>"+(p.rubro||"—")+"</td><td>"+(p.email||"<i style='color:var(--rojo)'>sin email</i>")+
+      (p.whatsapp?"<br><span class='mini'>💬 "+p.whatsapp+"</span>":"")+"</td><td>⭐ "+(p.calificacion||"—")+"</td><td>"+(p.plazoDias?p.plazoDias+" d":"—")+"</td><td>"+fmt(p.costoEnvio||0)+"</td><td>"+cnt+"</td>"+
+      "<td style='white-space:nowrap'>"+
+      (p.email?'<button class="btn chico verde" title="Cotización por email" onclick="mailCotizacion(['+p.id+'],\'\')">✉️</button> ':"")+
+      (p.whatsapp?'<button class="btn chico verde" title="Cotización por WhatsApp Web" style="background:#25d366" onclick="wspDirecto('+p.id+',\'\')">💬</button> ':"")+
+      '<button class="btn chico sec" onclick="editarProveedor('+p.id+')">Editar</button> '+
+      '<button class="btn chico rojo" onclick="borrarProveedor('+p.id+')">✕</button></td></tr>';
+  }).join("") || '<tr><td colspan="8" class="vacio">Sin proveedores.</td></tr>';
+}
+function abrirNuevoProveedor(){
+  provId.value=""; provNombre.value=""; provRubro.value=""; provEmail.value=""; provWsp.value="";
+  provCalif.value=3.5; provPlazo.value=5; provEnvio.value=0;
+  dlgProveedor.showModal();
+}
+function editarProveedor(id){
+  const p = provDe(id); if(!p) return;
+  provId.value=p.id; provNombre.value=p.nombre; provRubro.value=p.rubro||""; provEmail.value=p.email||""; provWsp.value=p.whatsapp||"";
+  provCalif.value=p.calificacion||3.5; provPlazo.value=p.plazoDias||5; provEnvio.value=p.costoEnvio||0;
+  dlgProveedor.showModal();
+}
+function guardarProveedor(){
+  const nombre = provNombre.value.trim();
+  if(!nombre){ toast("Ingresá el nombre del proveedor"); return; }
+  const extra = {calificacion:Number(provCalif.value)||3.5, plazoDias:Number(provPlazo.value)||0, costoEnvio:Number(provEnvio.value)||0, whatsapp:provWsp.value.replace(/\D/g,"")};
+  if(provId.value){
+    const p = provDe(Number(provId.value));
+    p.nombre=nombre; p.rubro=provRubro.value.trim(); p.email=provEmail.value.trim();
+    Object.assign(p, extra);
+  } else {
+    state.proveedores.push({id:nextId(state.proveedores), nombre, rubro:provRubro.value.trim(), email:provEmail.value.trim(), ...extra});
+  }
+  guardar(); dlgProveedor.close(); renderProveedores(); renderCatalogo();
+  toast("Proveedor guardado");
+}
+function borrarProveedor(id){
+  if(!confirm("¿Eliminar el proveedor y sus productos?")) return;
+  state.proveedores = state.proveedores.filter(p=>p.id!==id);
+  state.productos = state.productos.filter(p=>p.proveedorId!==id);
+  guardar(); renderProveedores(); renderCatalogo();
+}
+function renderCatalogo(){
+  const filtro = normalizar(document.getElementById("filtroCat").value);
+  const prods = state.productos.filter(p=>!filtro || normalizar(p.nombre+" "+(p.categoria||"")).includes(filtro));
+  document.getElementById("cntProductos").textContent = state.productos.length;
+  document.querySelector("#tCatalogo tbody").innerHTML = prods.slice(0,500).map(p=>{
+    const pv = provDe(p.proveedorId);
+    return "<tr><td>"+p.nombre+"</td><td>"+(p.categoria||"—")+"</td><td>"+(pv?pv.nombre:"—")+"</td><td><b>"+fmt(p.precio)+"</b></td></tr>";
+  }).join("") || '<tr><td colspan="4" class="vacio">Sin productos. Importá listas de precios.</td></tr>';
+}
+
+/* ================== SOLICITUDES ================== */
+function renderSolicitudes(){
+  const fs = document.getElementById("fSector").value;
+  const fe = document.getElementById("fEstado").value;
+  const sols = state.solicitudes
+    .filter(s=>(!fs||s.sector===fs)&&(!fe||s.estado===fe))
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  document.querySelector("#tSolicitudes tbody").innerHTML = sols.map(s=>
+    "<tr><td>"+s.id+"</td><td>"+s.fecha+"</td><td>"+s.sector+"</td><td>"+(s.solicitante||"—")+"</td><td>"+s.producto+
+    (s.adjudicada?'<br><span class="mini">✅ Adjudicada: '+s.adjudicada+'</span>':'')+
+    (s.fechaEntrega?'<br><span class="mini">📦 Entregada '+s.fechaEntrega+' · gestión: <b>'+diasEntre(s.fecha,s.fechaEntrega)+' días</b></span>'
+      : (s.fechaPrometida?'<br><span class="mini">🚚 Entrega prevista: '+s.fechaPrometida+(diasDesde(s.fechaPrometida)>0?' <b style="color:var(--rojo)">(vencida)</b>':'')+'</span>':''))+
+    ((s.recibido&&s.recibido<s.cantidad)?'<br><span class="mini">⏳ Recibido parcial: '+s.recibido+'/'+s.cantidad+'</span>':'')+
+    "</td><td>"+s.cantidad+"</td><td>"+fmt(s.monto)+"</td>"+
+    '<td><span class="tag '+s.estado.toLowerCase()+'">'+s.estado+"</span></td>"+
+    '<td style="white-space:nowrap"><button class="btn chico verde" title="Pedir cotización" onclick="mailDesdeSolicitud('+s.id+')">✉️</button> '+
+    '<button class="btn chico sec" title="Cuadro comparativo" onclick="abrirComparativo('+s.id+')">📊'+((s.cotRecibidas&&s.cotRecibidas.length)?' '+s.cotRecibidas.length:'')+'</button> '+
+    (s.estado!=="Recibida"&&s.estado!=="Rechazada"?'<button class="btn chico sec" title="Recibir compra (ingresa a stock)" onclick="abrirRecibir('+s.id+')">📦</button> ':'')+
+    '<button class="btn chico sec" onclick="editarSolicitud('+s.id+')">Editar</button> '+
+    '<button class="btn chico rojo" onclick="borrarSolicitud('+s.id+')">✕</button></td></tr>'
+  ).join("") || '<tr><td colspan="9" class="vacio">Sin solicitudes con estos filtros.</td></tr>';
+}
+function abrirNuevaSolicitud(){
+  dlgSolTitulo.textContent = "Nueva solicitud de compra";
+  solId.value=""; solSolicitante.value=""; solProducto.value=""; solCantidad.value=1; solMonto.value=""; solEstado.value="Pendiente"; solPrometida.value="";
+  dlgSolicitud.showModal();
+}
+function editarSolicitud(id){
+  const s = state.solicitudes.find(x=>x.id===id); if(!s) return;
+  dlgSolTitulo.textContent = "Editar solicitud N° "+id;
+  solId.value=s.id; solSector.value=s.sector; solSolicitante.value=s.solicitante||"";
+  solProducto.value=s.producto; solCantidad.value=s.cantidad; solMonto.value=s.monto; solEstado.value=s.estado;
+  solPrometida.value=s.fechaPrometida||"";
+  dlgSolicitud.showModal();
+}
+function guardarSolicitud(){
+  const producto = solProducto.value.trim();
+  if(!producto){ toast("Ingresá el producto solicitado"); return; }
+  const datos = {
+    sector: solSector.value, solicitante: solSolicitante.value.trim(), producto,
+    cantidad: Number(solCantidad.value)||1, monto: Number(solMonto.value)||0, estado: solEstado.value,
+    fechaPrometida: solPrometida.value || undefined
+  };
+  if(solId.value){
+    const s = state.solicitudes.find(x=>x.id===Number(solId.value));
+    Object.assign(s, datos);
+    if(s.estado==="Recibida" && !s.fechaEntrega) s.fechaEntrega = hoyISO();
+  } else {
+    state.solicitudes.push({id: nextId(state.solicitudes), fecha: hoyISO(), ...datos});
+  }
+  guardar(); dlgSolicitud.close(); renderSolicitudes();
+  toast("Solicitud guardada");
+}
+function borrarSolicitud(id){
+  if(!confirm("¿Eliminar la solicitud N° "+id+"?")) return;
+  state.solicitudes = state.solicitudes.filter(s=>s.id!==id);
+  guardar(); renderSolicitudes();
+}
+
+/* ================== EMAIL DE COTIZACIÓN ================== */
+let mailDestinos = [];
+function mailCotizacion(provIds, producto){
+  mailDestinos = provIds;
+  const provs = state.proveedores.filter(p=>p.email || p.whatsapp);
+  document.getElementById("mailProvs").innerHTML = provs.map(p=>
+    '<label style="display:block;padding:3px 0"><input type="checkbox" value="'+p.id+'" '+(provIds.includes(p.id)?"checked":"")+'> '+p.nombre+
+    ' <span class="mini">'+(p.email?"📧 "+p.email+" ":"")+(p.whatsapp?"💬 "+p.whatsapp:"")+'</span></label>'
+  ).join("") || '<div class="vacio">No hay proveedores con email ni WhatsApp cargado.</div>';
+  document.getElementById("wspZona").innerHTML = "";
+  document.getElementById("mailAsunto").value = "Solicitud de cotización" + (producto ? " - " + producto : "");
+  document.getElementById("mailCuerpo").value =
+"Estimados,\n\nNos dirigimos a ustedes para solicitar cotización por lo siguiente:\n\n" +
+"- Producto: " + (producto || "[completar]") + "\n- Cantidad: [completar]\n- Lugar de entrega: [completar]\n\n" +
+"Agradeceremos indicar precio unitario, condiciones de pago, plazo de entrega y validez de la oferta.\n\n" +
+"Quedamos a la espera de su respuesta.\n\nSaludos cordiales,\n" + (state.empresa||"") + "\nÁrea de Compras";
+  dlgMail.showModal();
+}
+function mailDesdeSolicitud(id){
+  const s = state.solicitudes.find(x=>x.id===id); if(!s) return;
+  mailCotizacion(state.proveedores.filter(p=>p.email||p.whatsapp).map(p=>p.id).slice(0,3), s.producto + " (cantidad: " + s.cantidad + ")");
+}
+function destinosSeleccionados(){
+  return [...document.querySelectorAll("#mailProvs input:checked")].map(c=>provDe(Number(c.value))).filter(Boolean);
+}
+function generarWsp(){
+  const dest = destinosSeleccionados().filter(p=>p.whatsapp);
+  if(!dest.length){ toast("Ninguno de los proveedores seleccionados tiene WhatsApp cargado"); return; }
+  const cuerpo = document.getElementById("mailCuerpo").value;
+  if(dest.length===1){
+    window.open(linkWsp(dest[0].whatsapp, cuerpo), "_blank");
+    toast("Abriendo WhatsApp Web...");
+    return;
+  }
+  // WhatsApp Web abre un chat por vez: se generan enlaces individuales para hacer clic uno por uno
+  document.getElementById("wspZona").innerHTML =
+    '<div class="nota">💬 WhatsApp Web abre <b>un chat por vez</b>. Hacé clic en cada proveedor para abrir su chat con el mensaje ya cargado:</div>'+
+    '<div class="sitios-links">'+
+    dest.map(p=>'<a href="'+linkWsp(p.whatsapp, cuerpo)+'" target="_blank" rel="noopener" style="border-color:#25d366;color:#128c4b">💬 '+p.nombre+'</a>').join("")+
+    '</div>';
+}
+function enviarMail(){
+  const dest = destinosSeleccionados().filter(p=>p.email);
+  if(!dest.length){ toast("Ninguno de los proveedores seleccionados tiene email cargado"); return; }
+  const para = dest.map(p=>p.email).join(",");
+  const url = "mailto:" + para +
+    "?subject=" + encodeURIComponent(document.getElementById("mailAsunto").value) +
+    "&body=" + encodeURIComponent(document.getElementById("mailCuerpo").value);
+  window.location.href = url;
+  dlgMail.close();
+  toast("Abriendo borrador... Cuando lleguen respuestas, cargalas en el cuadro comparativo (botón 📊 de la solicitud)");
+}
+function copiarMail(){
+  const dest = destinosSeleccionados().map(p=>p.nombre+(p.email?" <"+p.email+">":"")+(p.whatsapp?" [WA "+p.whatsapp+"]":"")).join(", ");
+  const txt = "Para: "+dest+"\nAsunto: "+document.getElementById("mailAsunto").value+"\n\n"+document.getElementById("mailCuerpo").value;
+  navigator.clipboard.writeText(txt).then(()=>toast("Texto copiado al portapapeles"));
+}
+/* ================== OFERTAS DE SITIOS WEB ================== */
+function abrirOferta(){
+  document.getElementById("dlSitios").innerHTML = state.sitios.map(s=>'<option value="'+s.nombre+'">').join("");
+  ofFuente.value = state.sitios[0] ? state.sitios[0].nombre : "";
+  ofProducto.value = document.getElementById("qBusqueda").value.trim();
+  ofPrecio.value=""; ofEnvio.value=0; ofDesc.value=0; ofPlazo.value=3; ofCalif.value=4.5; ofUrl.value="";
+  dlgOferta.showModal();
+}
+function guardarOferta(){
+  const producto = ofProducto.value.trim();
+  const precio = Number(ofPrecio.value);
+  if(!producto || !precio){ toast("Completá producto y precio"); return; }
+  state.ofertasWeb.push({id: nextId(state.ofertasWeb), fuente: ofFuente.value.trim()||"Sitio web", producto,
+    precio, envio:Number(ofEnvio.value)||0, descuento:Number(ofDesc.value)||0,
+    plazoDias:Number(ofPlazo.value)||0, calificacion:Number(ofCalif.value)||4, pago:ofPago.value, url:ofUrl.value.trim(),
+    fecha:hoyISO()});
+  guardar(); dlgOferta.close();
+  toast("Oferta registrada: ahora compite en las búsquedas");
+  buscar();
+}
+
+/* ================== CUADRO COMPARATIVO POR SOLICITUD ================== */
+function solDe(id){ return state.solicitudes.find(x=>x.id===id); }
+function abrirComparativo(id){
+  const s = solDe(id); if(!s) return;
+  compSolId.value = id;
+  compTitulo.textContent = "Cuadro comparativo · Solicitud N° "+id+" — "+s.producto;
+  document.getElementById("dlOrigenes").innerHTML =
+    state.proveedores.map(p=>'<option value="'+p.nombre+'">').join("") +
+    state.sitios.map(x=>'<option value="'+x.nombre+'">').join("");
+  renderComparativo();
+  dlgComp.showModal();
+}
+function renderComparativo(){
+  const s = solDe(Number(compSolId.value)); if(!s) return;
+  const est = document.getElementById("compEstado");
+  est.innerHTML = s.adjudicada
+    ? '<div class="nota">✅ Compra adjudicada a <b>'+s.adjudicada+'</b>. Podés re-adjudicar si cambia la decisión.</div>'
+    : '<div class="nota">Cargá las respuestas de proveedores/sitios a medida que lleguen. El sistema calcula la <b>compra eficiente</b> según costo final, plazo y calificación.</div>';
+  const ops = puntuar((s.cotRecibidas||[]).map((c,i)=>({...c, _i:i})));
+  document.getElementById("compTabla").innerHTML = ops.length
+    ? '<table><thead><tr><th>Origen</th><th>Precio</th><th>Desc.</th><th>Envío</th><th>Costo final</th><th>Pago</th><th>Valor hoy (IPC '+(state.ipc||0)+'%)</th><th>Plazo</th><th>Calif.</th><th>Puntaje</th><th></th></tr></thead><tbody>'+
+      ops.map((o,i)=>'<tr'+(i===0?' class="mejor-fila"':'')+'><td><b>'+o.origen+'</b>'+(i===0?' ⭐ <span class="mini">compra eficiente</span>':'')+'</td><td>'+fmt(o.precio)+'</td><td>'+(o.descuento||0)+'%</td><td>'+fmt(o.envio||0)+'</td><td>'+fmt(o.costoFinal)+'</td><td>'+(o.pago||"Contado")+'</td><td><b>'+fmt(o.vp)+'</b></td><td>'+(o.plazoDias?o.plazoDias+' d':'—')+'</td><td>⭐ '+o.calificacion+'</td><td class="score">'+o.score+'/100</td>'+
+      '<td style="white-space:nowrap"><button class="btn chico verde" onclick="adjudicar('+s.id+','+o._i+')">Adjudicar</button> <button class="btn chico rojo" onclick="borrarRespuesta('+s.id+','+o._i+')">✕</button></td></tr>').join("")+
+      '</tbody></table><p class="mini" style="margin-top:6px">"Valor hoy" = costo final descontado por inflación según la forma de pago: permite comparar contado vs. financiado de manera justa.</p>'
+    : '<div class="vacio">Todavía no hay respuestas cargadas.</div>';
+}
+function agregarRespuesta(){
+  const s = solDe(Number(compSolId.value)); if(!s) return;
+  const origen = cmpOrigen.value.trim();
+  const precio = Number(cmpPrecio.value);
+  if(!origen || !precio){ toast("Completá origen y precio"); return; }
+  s.cotRecibidas = s.cotRecibidas || [];
+  s.cotRecibidas.push({origen, precio, envio:Number(cmpEnvio.value)||0, descuento:Number(cmpDesc.value)||0,
+    plazoDias:Number(cmpPlazo.value)||0, calificacion:Number(cmpCalif.value)||4, pago:cmpPago.value});
+  if(s.estado==="Pendiente") s.estado = "Cotizada";
+  cmpOrigen.value=""; cmpPrecio.value="";
+  guardar(); renderComparativo(); renderSolicitudes();
+  toast("Respuesta cargada");
+}
+function borrarRespuesta(solId, idx){
+  const s = solDe(solId); if(!s) return;
+  s.cotRecibidas.splice(idx,1);
+  guardar(); renderComparativo(); renderSolicitudes();
+}
+function adjudicar(solId, idx){
+  const s = solDe(solId); if(!s || !s.cotRecibidas[idx]) return;
+  const o = s.cotRecibidas[idx];
+  s.adjudicada = o.origen;
+  s.estado = "Aprobada";
+  s.monto = Math.round(costoFinal(o) * (s.cantidad||1));
+  if(o.plazoDias){
+    const d = new Date(); d.setDate(d.getDate() + o.plazoDias);
+    s.fechaPrometida = d.toISOString().slice(0,10);
+  }
+  guardar(); renderComparativo(); renderSolicitudes();
+  toast("Adjudicada a "+o.origen+(s.fechaPrometida?" · entrega prevista "+s.fechaPrometida:"")+" · monto "+fmt(s.monto));
+}
+
+/* ================== PEDIDOS POR EMAIL ================== */
+function guardarMailPedidos(){
+  state.mailPedidos = document.getElementById("mailPedidosInput").value.trim();
+  guardar(); toast(state.mailPedidos ? "Casilla de pedidos guardada" : "Casilla vaciada");
+}
+function copiarPlantillaPedido(){
+  const casilla = state.mailPedidos || "[casilla de pedidos]";
+  const txt = "CÓMO PEDIR UNA COMPRA\n\nEnviá un email a: "+casilla+"\nAsunto: PEDIDO DE COMPRA\n\nCon este formato (una línea por campo):\n\n"+
+    "Sector: [tu sector]\nSolicitante: [nombre y apellido]\nProducto: [qué necesitás, lo más específico posible]\nCantidad: [número]\n\n"+
+    "Si necesitás varios productos, repetí los campos por cada uno en el mismo mail.";
+  navigator.clipboard.writeText(txt).then(()=>toast("Plantilla copiada: pegala en un mail para los sectores"));
+}
+function abrirPedidos(){
+  document.getElementById("lblMailPedidos").textContent = state.mailPedidos || "la casilla configurada";
+  document.getElementById("pedResultado").innerHTML = "";
+  dlgPedidos.showModal();
+}
+function procesarPedidos(){
+  const txt = document.getElementById("pedTexto").value;
+  const out = document.getElementById("pedResultado");
+  if(!txt.trim()){ toast("Pegá el texto de los mails"); return; }
+  const campo = (l,n)=>{ const m = l.match(new RegExp("^\\s*"+n+"\\s*:\\s*(.+)$","i")); return m ? m[1].trim() : null; };
+  const pedidos = [];
+  let cur = {};
+  txt.split(/\r?\n/).forEach(l=>{
+    let v;
+    if((v=campo(l,"sector"))!=null){ if(cur.producto){ pedidos.push(cur); cur={}; } cur.sector=v; }
+    else if((v=campo(l,"solicitante"))!=null){ cur.solicitante=v; }
+    else if((v=campo(l,"producto"))!=null){ if(cur.producto){ pedidos.push(cur); cur={sector:cur.sector, solicitante:cur.solicitante}; } cur.producto=v; }
+    else if((v=campo(l,"cantidad"))!=null){ cur.cantidad = parseInt(String(v).replace(/\D/g,""))||1; }
+    else if((v=campo(l,"monto"))!=null){ cur.monto = parseFloat(String(v).replace(/[^\d.,]/g,"").replace(/\./g,"").replace(",","."))||0; }
+  });
+  if(cur.producto) pedidos.push(cur);
+  if(!pedidos.length){
+    out.innerHTML = '<div class="nota">⚠️ No se detectaron pedidos. Verificá que cada línea tenga el formato <code>Campo: valor</code> (al menos "Producto:").</div>';
+    return;
+  }
+  const creadas = [];
+  pedidos.forEach(p=>{
+    let sector = p.sector || state.sectores[0] || "General";
+    const match = state.sectores.find(s=>normalizar(s)===normalizar(sector));
+    if(match) sector = match;
+    else { state.sectores.push(sector); } // alta automática del sector si es nuevo
+    const nueva = {
+      id: nextId(state.solicitudes), fecha: hoyISO(), sector,
+      solicitante: p.solicitante || "(email)", producto: p.producto,
+      cantidad: p.cantidad || 1, monto: p.monto || 0, estado: "Pendiente",
+      origen: "email", cotRecibidas: []
+    };
+    state.solicitudes.push(nueva);
+    creadas.push(nueva);
+  });
+  guardar(); llenarSelects(); renderSolicitudes(); renderSectores();
+  out.innerHTML = '<div class="nota">✅ <b>'+creadas.length+' solicitud/es ingresadas:</b><br>'+
+    creadas.map(s=>"N° "+s.id+" · "+s.sector+" · "+s.producto+" x"+s.cantidad).join("<br>")+
+    '<br><span class="mini">Ya figuran como Pendientes en la lista de solicitudes.</span></div>';
+  document.getElementById("pedTexto").value = "";
+  toast(creadas.length+" solicitud/es creadas desde email");
+}
+
+/* ================== STOCK ================== */
+function artDe(id){ return state.stock.find(a=>a.id===id); }
+function renderStock(){
+  // recomendaciones de compra por stock mínimo
+  const bajos = state.stock.filter(a=>a.cantidad<=a.minimo);
+  document.getElementById("cardRecom").innerHTML = '<h2>🔔 Recomendaciones de compra (según stock mínimo)</h2>'+
+    (bajos.length
+      ? bajos.map(a=>{
+          const sug = Math.max(a.minimo*2 - a.cantidad, 1);
+          return '<div class="fila" style="justify-content:space-between;align-items:center;border-bottom:1px solid var(--borde);padding:7px 0">'+
+            '<div><b>'+a.nombre+'</b> <span class="mini">· stock '+a.cantidad+' / mínimo '+a.minimo+
+            (a.ultCompra?' · '+diasDesde(a.ultCompra)+' días sin compras':'')+'</span></div>'+
+            '<button class="btn chico verde" onclick="solicitarReposicion('+a.id+','+sug+')">🛒 Generar solicitud x'+sug+'</button></div>';
+        }).join("")
+      : '<div class="vacio">No hay artículos bajo el mínimo. Stock saludable. 👍</div>');
+  // tabla de stock
+  document.querySelector("#tStock tbody").innerHTML = state.stock.map(a=>{
+    const d = diasDesde(a.ultCompra);
+    const est = a.cantidad<=a.minimo ? '<span class="tag rechazada">REPONER</span>'
+      : (a.cantidad<=a.minimo*1.5 ? '<span class="tag pendiente">ATENCIÓN</span>' : '<span class="tag aprobada">OK</span>');
+    return "<tr><td><b>"+a.nombre+"</b></td><td>"+(a.categoria||"—")+"</td><td><b>"+a.cantidad+"</b></td><td>"+a.minimo+"</td><td>"+est+"</td>"+
+      "<td>"+(a.ultCompra||"—")+"</td><td>"+(d!=null?d+" días":"—")+"</td>"+
+      '<td style="white-space:nowrap"><button class="btn chico verde" title="Ingreso" onclick="abrirMov('+a.id+',\'ingreso\')">⬆</button> '+
+      '<button class="btn chico sec" title="Entrega a sector" onclick="abrirMov('+a.id+',\'egreso\')">⬇</button> '+
+      '<button class="btn chico sec" onclick="abrirArticulo('+a.id+')">Editar</button> '+
+      '<button class="btn chico rojo" onclick="borrarArticulo('+a.id+')">✕</button></td></tr>';
+  }).join("") || '<tr><td colspan="8" class="vacio">Sin artículos. Creá artículos o recibí compras (botón 📦 en Solicitudes).</td></tr>';
+  // movimientos
+  const movs = [...state.movStock].sort((a,b)=>b.fecha.localeCompare(a.fecha)||b.id-a.id).slice(0,20);
+  document.querySelector("#tMovs tbody").innerHTML = movs.map(m=>{
+    const a = artDe(m.stockId);
+    return "<tr><td>"+m.fecha+"</td><td>"+(a?a.nombre:"(eliminado)")+"</td>"+
+      "<td>"+(m.tipo==="ingreso"?'<span class="tag aprobada">⬆ Ingreso</span>':'<span class="tag cotizada">⬇ Entrega</span>')+"</td>"+
+      "<td>"+m.cantidad+"</td><td>"+(m.ref||"—")+"</td></tr>";
+  }).join("") || '<tr><td colspan="5" class="vacio">Sin movimientos.</td></tr>';
+}
+function solicitarReposicion(artId, cant){
+  const a = artDe(artId); if(!a) return;
+  abrirNuevaSolicitud();
+  solProducto.value = a.nombre;
+  solCantidad.value = cant;
+  solSolicitante.value = "Reposición de stock";
+  toast("Completá el sector y guardá la solicitud");
+}
+function abrirArticulo(id){
+  if(id){
+    const a = artDe(id); if(!a) return;
+    artId.value=a.id; artNombre.value=a.nombre; artCategoria.value=a.categoria||"";
+    artCantidad.value=a.cantidad; artMinimo.value=a.minimo;
+  } else {
+    artId.value=""; artNombre.value=""; artCategoria.value=""; artCantidad.value=0; artMinimo.value=1;
+  }
+  dlgArticulo.showModal();
+}
+function guardarArticulo(){
+  const nombre = artNombre.value.trim();
+  if(!nombre){ toast("Ingresá el nombre del artículo"); return; }
+  if(artId.value){
+    const a = artDe(Number(artId.value));
+    a.nombre=nombre; a.categoria=artCategoria.value.trim();
+    a.cantidad=Number(artCantidad.value)||0; a.minimo=Number(artMinimo.value)||0;
+  } else {
+    state.stock.push({id:nextId(state.stock), nombre, categoria:artCategoria.value.trim(),
+      cantidad:Number(artCantidad.value)||0, minimo:Number(artMinimo.value)||0, ultCompra:null});
+  }
+  guardar(); dlgArticulo.close(); renderStock(); toast("Artículo guardado");
+}
+function borrarArticulo(id){
+  if(!confirm("¿Eliminar el artículo del stock?")) return;
+  state.stock = state.stock.filter(a=>a.id!==id);
+  guardar(); renderStock();
+}
+function abrirMov(artId2, tipo){
+  const a = artDe(artId2); if(!a) return;
+  movArtId.value = artId2; movTipo.value = tipo;
+  movTitulo.textContent = (tipo==="ingreso"?"⬆ Ingreso a stock — ":"⬇ Entrega (total o parcial) — ")+a.nombre;
+  movCant.value = 1; movRef.value = "";
+  movRef.placeholder = tipo==="egreso" ? "Sector destino (ej.: Administración)" : "Referencia (ej.: compra directa)";
+  dlgMov.showModal();
+}
+function guardarMov(){
+  const a = artDe(Number(movArtId.value)); if(!a) return;
+  const tipo = movTipo.value;
+  const c = Number(movCant.value);
+  if(!c || c<=0){ toast("Ingresá una cantidad válida"); return; }
+  if(tipo==="egreso" && c>a.cantidad){ toast("No hay stock suficiente (disponible: "+a.cantidad+")"); return; }
+  a.cantidad += (tipo==="ingreso" ? c : -c);
+  if(tipo==="ingreso") a.ultCompra = hoyISO(); else a.ultEntrega = hoyISO();
+  state.movStock.push({id:nextId(state.movStock), fecha:hoyISO(), stockId:a.id, tipo, cantidad:c, ref:movRef.value.trim()});
+  guardar(); dlgMov.close(); renderStock();
+  toast(tipo==="ingreso" ? "Ingreso registrado" : "Entrega registrada");
+}
+function abrirRecibir(solId2){
+  const s = solDe(solId2); if(!s) return;
+  recSolId.value = solId2;
+  recTitulo.textContent = "Recibir compra · Solicitud N° "+s.id;
+  const pend = s.cantidad - (s.recibido||0);
+  document.getElementById("recInfo").innerHTML = "<b>"+s.producto+"</b> · pedido: "+s.cantidad+
+    (s.recibido?" · ya recibido: "+s.recibido:"")+" · <b>pendiente: "+pend+"</b>";
+  document.getElementById("dlArticulos").innerHTML = state.stock.map(a=>'<option value="'+a.nombre+'">').join("");
+  const match = state.stock.find(a=>normalizar(s.producto).includes(normalizar(a.nombre)) || normalizar(a.nombre).includes(normalizar(s.producto)));
+  recArticulo.value = match ? match.nombre : s.producto;
+  recCant.value = Math.max(pend,1);
+  dlgRecibir.showModal();
+}
+function confirmarRecepcion(){
+  const s = solDe(Number(recSolId.value)); if(!s) return;
+  const nombre = recArticulo.value.trim();
+  const c = Number(recCant.value);
+  if(!nombre || !c || c<=0){ toast("Completá artículo y cantidad"); return; }
+  let a = state.stock.find(x=>normalizar(x.nombre)===normalizar(nombre));
+  if(!a){
+    a = {id:nextId(state.stock), nombre, categoria:"", cantidad:0, minimo:1, ultCompra:null};
+    state.stock.push(a);
+  }
+  a.cantidad += c;
+  a.ultCompra = hoyISO();
+  state.movStock.push({id:nextId(state.movStock), fecha:hoyISO(), stockId:a.id, tipo:"ingreso", cantidad:c, ref:"Solicitud N° "+s.id+" ("+s.sector+")"});
+  s.recibido = (s.recibido||0) + c;
+  if(s.recibido >= s.cantidad){
+    s.estado = "Recibida";
+    if(!s.fechaEntrega) s.fechaEntrega = hoyISO();
+    toast("Recepción completa · tiempo de gestión: "+diasEntre(s.fecha, s.fechaEntrega)+" días");
+  } else {
+    toast("Recepción parcial registrada ("+s.recibido+"/"+s.cantidad+")");
+  }
+  guardar(); dlgRecibir.close(); renderStock(); renderSolicitudes();
+}
+
+/* ================== INFORMES ================== */
+function generarInforme(){
+  const tipo = document.getElementById("tipoInforme").value;
+  const sector = document.getElementById("infSector").value;
+  const sols = state.solicitudes.filter(s=>!sector || s.sector===sector);
+  const hoy = new Date().toLocaleDateString("es-AR");
+  const total = sols.reduce((a,s)=>a+(s.monto||0),0);
+
+  const porSector = {};
+  sols.forEach(s=>{ porSector[s.sector] = porSector[s.sector] || {cant:0,monto:0}; porSector[s.sector].cant++; porSector[s.sector].monto+=s.monto||0; });
+  const porEstado = {};
+  sols.forEach(s=>{ porEstado[s.estado]=(porEstado[s.estado]||0)+1; });
+
+  let html = "<h1>"+(state.empresa||"Empresa")+" · Informe de Compras</h1>"+
+    '<p style="color:var(--texto-sec)">Generado el '+hoy+(sector?' · Sector: <b>'+sector+'</b>':' · Todos los sectores')+"</p>";
+
+  html += "<h2>Resumen ejecutivo</h2><p>Se registran <b>"+sols.length+"</b> solicitudes de compra por un monto estimado total de <b>"+fmt(total)+"</b>. "+
+    "Distribución por estado: "+Object.entries(porEstado).map(([e,c])=>e+" ("+c+")").join(", ")+".</p>";
+
+  if(tipo==="general" || tipo==="sector"){
+    html += "<h2>Solicitudes por sector</h2><table><thead><tr><th>Sector</th><th>Solicitudes</th><th>Monto estimado</th><th>% del total</th></tr></thead><tbody>"+
+      Object.entries(porSector).sort((a,b)=>b[1].monto-a[1].monto).map(([sec,d])=>
+        "<tr><td>"+sec+"</td><td>"+d.cant+"</td><td>"+fmt(d.monto)+"</td><td>"+(total? (d.monto/total*100).toFixed(1):"0")+"%</td></tr>").join("")+
+      "</tbody></table>";
+  }
+  if(tipo==="general" || tipo==="sector"){
+    html += "<h2>Detalle de solicitudes</h2><table><thead><tr><th>N°</th><th>Fecha</th><th>Sector</th><th>Producto</th><th>Cant.</th><th>Monto</th><th>Estado</th></tr></thead><tbody>"+
+      sols.sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(s=>
+        "<tr><td>"+s.id+"</td><td>"+s.fecha+"</td><td>"+s.sector+"</td><td>"+s.producto+"</td><td>"+s.cantidad+"</td><td>"+fmt(s.monto)+"</td><td>"+s.estado+"</td></tr>").join("")+
+      "</tbody></table>";
+  }
+  if(tipo==="general" || tipo==="proveedores"){
+    html += "<h2>Proveedores registrados</h2><table><thead><tr><th>Proveedor</th><th>Rubro</th><th>Email</th><th>Productos en catálogo</th><th>Precio promedio</th></tr></thead><tbody>"+
+      state.proveedores.map(p=>{
+        const prods = state.productos.filter(x=>x.proveedorId===p.id);
+        const prom = prods.length? prods.reduce((a,x)=>a+x.precio,0)/prods.length : 0;
+        return "<tr><td>"+p.nombre+"</td><td>"+(p.rubro||"—")+"</td><td>"+(p.email||"—")+"</td><td>"+prods.length+"</td><td>"+(prods.length?fmt(prom):"—")+"</td></tr>";
+      }).join("")+"</tbody></table>";
+  }
+  if(tipo==="general" || tipo==="sector"){
+    const entregadas = sols.filter(s=>s.fechaEntrega);
+    if(entregadas.length){
+      const porSecG = {};
+      entregadas.forEach(s=>{
+        porSecG[s.sector] = porSecG[s.sector] || {n:0, dias:0};
+        porSecG[s.sector].n++; porSecG[s.sector].dias += diasEntre(s.fecha, s.fechaEntrega);
+      });
+      html += "<h2>Tiempos de gestión (solicitud → entrega)</h2><table><thead><tr><th>Sector</th><th>Compras entregadas</th><th>Días promedio de gestión</th></tr></thead><tbody>"+
+        Object.entries(porSecG).map(([sec,d])=>"<tr><td>"+sec+"</td><td>"+d.n+"</td><td><b>"+Math.round(d.dias/d.n)+" días</b></td></tr>").join("")+
+        "</tbody></table>";
+    }
+  }
+  if(tipo==="general" && state.stock.length){
+    const bajos = state.stock.filter(a=>a.cantidad<=a.minimo);
+    html += "<h2>Situación de stock</h2><table><thead><tr><th>Artículo</th><th>Stock</th><th>Mínimo</th><th>Estado</th><th>Días sin compras</th></tr></thead><tbody>"+
+      state.stock.map(a=>"<tr><td>"+a.nombre+"</td><td>"+a.cantidad+"</td><td>"+a.minimo+"</td><td>"+(a.cantidad<=a.minimo?"<b style='color:#c0392b'>REPONER</b>":"OK")+"</td><td>"+(a.ultCompra?diasDesde(a.ultCompra):"—")+"</td></tr>").join("")+
+      "</tbody></table>"+
+      (bajos.length?"<p><b>Recomendación:</b> generar solicitudes de compra para "+bajos.length+" artículo/s bajo el mínimo: "+bajos.map(a=>a.nombre).join(", ")+".</p>":"");
+  }
+  const conCuadros = sols.filter(s=>s.cotRecibidas && s.cotRecibidas.length);
+  if((tipo==="general"||tipo==="sector") && conCuadros.length){
+    html += "<h2>Cuadros comparativos — compra eficiente</h2>";
+    conCuadros.forEach(s=>{
+      const ops = puntuar(s.cotRecibidas.map(c=>({...c})));
+      html += "<p style='margin-top:10px'><b>Solicitud N° "+s.id+" · "+s.producto+"</b> ("+s.sector+")"+
+        (s.adjudicada?" — ✅ Adjudicada a <b>"+s.adjudicada+"</b>":" — sin adjudicar")+"</p>"+
+        "<table><thead><tr><th>Origen</th><th>Precio</th><th>Desc.</th><th>Envío</th><th>Costo final</th><th>Pago</th><th>Plazo</th><th>Calif.</th><th>Puntaje</th></tr></thead><tbody>"+
+        ops.map((o,i)=>"<tr><td>"+o.origen+(i===0?" ⭐":"")+"</td><td>"+fmt(o.precio)+"</td><td>"+(o.descuento||0)+"%</td><td>"+fmt(o.envio||0)+"</td><td><b>"+fmt(o.costoFinal)+"</b></td><td>"+(o.pago||"Contado")+" (hoy: "+fmt(o.vp)+")</td><td>"+(o.plazoDias?o.plazoDias+" d":"—")+"</td><td>"+o.calificacion+"</td><td>"+o.score+"/100</td></tr>").join("")+
+        "</tbody></table>";
+    });
+  }
+  html += '<p style="margin-top:20px;font-size:11px;color:var(--texto-sec)">Informe generado automáticamente por el Sistema de Gestión de Compras. ⭐ indica la compra eficiente según criterios configurados (costo '+(state.pesos.costo)+'% · plazo '+(state.pesos.plazo)+'% · calificación '+(state.pesos.calif)+'%). Valores financiados descontados con IPC mensual del '+(state.ipc||0)+'%.</p>';
+  document.getElementById("informeOut").innerHTML = html;
+  toast("Informe generado");
+}
+function descargarInforme(){
+  const cuerpo = document.getElementById("informeOut").innerHTML;
+  const doc = "<!DOCTYPE html><html lang='es'><head><meta charset='UTF-8'><title>Informe de Compras</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:900px;margin:30px auto;color:#2c3345;line-height:1.5}h1{color:#0f3260}h2{color:#0f3260;border-bottom:2px solid #e8f0fb;padding-bottom:4px}table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}th{background:#e8f0fb;color:#0f3260;text-align:left;padding:7px}td{padding:7px;border-bottom:1px solid #ddd}</style></head><body>"+cuerpo+"</body></html>";
+  descargarTexto(doc, "informe-compras-"+new Date().toISOString().slice(0,10)+".html", "text/html");
+}
+
+/* ================== DASHBOARD ================== */
+function limpiarFiltrosDash(){
+  document.getElementById("dashSector").value="";
+  document.getElementById("dashDesde").value="";
+  document.getElementById("dashHasta").value="";
+  renderDashboard();
+}
+function renderDashboard(){
+  const sec = document.getElementById("dashSector").value;
+  const desde = document.getElementById("dashDesde").value;
+  const hasta = document.getElementById("dashHasta").value;
+  const sols = state.solicitudes.filter(s=>
+    (!sec||s.sector===sec) && (!desde||s.fecha>=desde) && (!hasta||s.fecha<=hasta));
+
+  const total = sols.reduce((a,s)=>a+(s.monto||0),0);
+  const pend = sols.filter(s=>s.estado==="Pendiente").length;
+  const prom = sols.length? total/sols.length : 0;
+  const entregadas = sols.filter(s=>s.fechaEntrega);
+  const gestionProm = entregadas.length
+    ? Math.round(entregadas.reduce((a,s)=>a+diasEntre(s.fecha,s.fechaEntrega),0)/entregadas.length) : null;
+  const stockBajo = state.stock.filter(a=>a.cantidad<=a.minimo).length;
+  document.getElementById("kpis").innerHTML =
+    '<div class="kpi"><div class="v">'+sols.length+'</div><div class="l">Solicitudes</div></div>'+
+    '<div class="kpi"><div class="v">'+fmt(total)+'</div><div class="l">Monto total estimado</div></div>'+
+    '<div class="kpi"><div class="v">'+fmt(prom)+'</div><div class="l">Promedio por solicitud</div></div>'+
+    '<div class="kpi"><div class="v">'+pend+'</div><div class="l">Pendientes</div></div>'+
+    '<div class="kpi"><div class="v">'+(gestionProm!=null?gestionProm+' días':'—')+'</div><div class="l">Gestión promedio (solicitud → entrega)</div></div>'+
+    '<div class="kpi"><div class="v"'+(stockBajo?' style="color:var(--rojo)"':'')+'>'+stockBajo+'</div><div class="l">Artículos bajo stock mínimo</div></div>';
+
+  const porSector={}, montoSector={}, porEstado={}, porMes={};
+  sols.forEach(s=>{
+    porSector[s.sector]=(porSector[s.sector]||0)+1;
+    montoSector[s.sector]=(montoSector[s.sector]||0)+(s.monto||0);
+    porEstado[s.estado]=(porEstado[s.estado]||0)+1;
+    const m = s.fecha.slice(0,7);
+    porMes[m]=(porMes[m]||0)+(s.monto||0);
+  });
+  const meses = Object.keys(porMes).sort();
+
+  const colores = ["#1a4b8c","#1e8f5a","#e07b1f","#8e44ad","#c0392b","#16a085","#d4a017","#5d6d7e"];
+  const mk = (id, cfg)=>{
+    if(charts[id]) charts[id].destroy();
+    charts[id] = new Chart(document.getElementById(id), cfg);
+  };
+  const optBase = {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}};
+
+  mk("chSector", {type:"bar", data:{labels:Object.keys(porSector), datasets:[{data:Object.values(porSector), backgroundColor:colores}]}, options:optBase});
+  mk("chMonto", {type:"bar", data:{labels:Object.keys(montoSector), datasets:[{data:Object.values(montoSector), backgroundColor:"#1a4b8c"}]},
+    options:{...optBase, indexAxis:"y"}});
+  mk("chEstado", {type:"doughnut", data:{labels:Object.keys(porEstado), datasets:[{data:Object.values(porEstado),
+    backgroundColor:Object.keys(porEstado).map(e=>({Pendiente:"#d4a017",Cotizada:"#1a4b8c",Aprobada:"#1e8f5a",Recibida:"#8e44ad",Rechazada:"#c0392b"}[e]||"#5d6d7e"))}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:"bottom"}}}});
+  mk("chMes", {type:"line", data:{labels:meses, datasets:[{data:meses.map(m=>porMes[m]), borderColor:"#1a4b8c", backgroundColor:"rgba(26,75,140,.12)", fill:true, tension:.3}]}, options:optBase});
+}
+
+/* ================== CONFIGURACIÓN ================== */
+function renderSitios(){
+  document.querySelector("#tSitios tbody").innerHTML = state.sitios.map((s,i)=>
+    "<tr><td><b>"+s.nombre+"</b></td><td style='font-size:12px;color:var(--texto-sec)'>"+s.url+"</td>"+
+    '<td><input type="checkbox" '+(s.activo?"checked":"")+' onchange="state.sitios['+i+'].activo=this.checked;guardar()"></td>'+
+    '<td><button class="btn chico rojo" onclick="borrarSitio('+i+')">✕</button></td></tr>'
+  ).join("") || '<tr><td colspan="4" class="vacio">Sin sitios configurados.</td></tr>';
+  const chk = document.getElementById("chkMlAuto");
+  if(chk) chk.checked = state.mlAuto !== false;
+}
+function agregarSitio(){
+  const nombre = document.getElementById("sitioNombre").value.trim();
+  const url = document.getElementById("sitioUrl").value.trim();
+  if(!nombre || !url){ toast("Completá nombre y URL"); return; }
+  if(!url.includes("{q}")){ toast("La URL debe incluir {q} donde va el término de búsqueda"); return; }
+  state.sitios.push({nombre, url, activo:true});
+  document.getElementById("sitioNombre").value=""; document.getElementById("sitioUrl").value="";
+  guardar(); renderSitios(); toast("Sitio agregado");
+}
+function borrarSitio(i){ state.sitios.splice(i,1); guardar(); renderSitios(); }
+
+function renderSectores(){
+  document.getElementById("listaSectores").innerHTML = state.sectores.map((s,i)=>
+    '<span class="tag cotizada" style="margin:3px;display:inline-flex;align-items:center;gap:6px">'+s+
+    ' <span style="cursor:pointer;font-weight:700" onclick="borrarSector('+i+')">✕</span></span>').join("");
+}
+function agregarSector(){
+  const s = document.getElementById("nuevoSector").value.trim();
+  if(!s || state.sectores.includes(s)) return;
+  state.sectores.push(s);
+  document.getElementById("nuevoSector").value="";
+  guardar(); renderSectores(); llenarSelects();
+}
+function borrarSector(i){
+  state.sectores.splice(i,1);
+  guardar(); renderSectores(); llenarSelects();
+}
+
+function exportarDatos(){
+  descargarTexto(JSON.stringify(state,null,2), "respaldo-compras-"+new Date().toISOString().slice(0,10)+".json", "application/json");
+}
+function restaurarDatos(f){
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const d = JSON.parse(r.result);
+      if(!d.proveedores || !d.solicitudes) throw new Error("formato inválido");
+      state = d; guardar(); renderTodo(); toast("Respaldo restaurado");
+    }catch(e){ toast("Archivo de respaldo inválido"); }
+  };
+  r.readAsText(f);
+}
+function reiniciarDatos(){
+  if(!confirm("Se reemplazarán todos los datos por los de ejemplo. ¿Continuar?")) return;
+  state = datosEjemplo(); guardar(); renderTodo(); toast("Datos de ejemplo restablecidos");
+}
+
+/* ================== INICIALIZACIÓN ================== */
+function llenarSelects(){
+  const ops = state.sectores.map(s=>'<option>'+s+'</option>').join("");
+  document.getElementById("solSector").innerHTML = ops;
+  document.getElementById("fSector").innerHTML = '<option value="">Todos</option>'+ops;
+  document.getElementById("infSector").innerHTML = '<option value="">Todos</option>'+ops;
+  document.getElementById("dashSector").innerHTML = '<option value="">Todos</option>'+ops;
+}
+function guardarPesos(){
+  const c = Number(pesoCosto.value)||0, p = Number(pesoPlazo.value)||0, k = Number(pesoCalif.value)||0;
+  if(c+p+k <= 0){ toast("Los pesos deben sumar más de 0"); return; }
+  state.pesos = {costo:c, plazo:p, calif:k};
+  guardar(); toast("Criterios guardados ("+c+"/"+p+"/"+k+")");
+}
+function renderPesos(){
+  pesoCosto.value = state.pesos.costo;
+  pesoPlazo.value = state.pesos.plazo;
+  pesoCalif.value = state.pesos.calif;
+  ipcInput.value = state.ipc;
+}
+function guardarIpc(){
+  const v = Number(ipcInput.value);
+  if(isNaN(v) || v<0){ toast("Ingresá un IPC válido"); return; }
+  state.ipc = v;
+  guardar(); toast("IPC mensual actualizado a "+v+"%");
+}
+function renderTodo(){
+  llenarSelects();
+  renderSolicitudes();
+  renderProveedores();
+  renderCatalogo();
+  renderSitios();
+  renderSectores();
+  renderPesos();
+  renderStock();
+  renderML();
+}
+/* ================== AUTENTICACIÓN ================== */
+const AUTH_KEY = "gestionComprasAuth";
+async function hashTexto(txt){
+  try{
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  }catch(e){
+    // fallback simple si crypto.subtle no está disponible
+    let h = 0x811c9dc5;
+    for(let i=0;i<txt.length;i++){ h ^= txt.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return "f"+h.toString(16)+txt.length;
+  }
+}
+async function credenciales(){
+  try{
+    const s = localStorage.getItem(AUTH_KEY);
+    if(s) return JSON.parse(s);
+  }catch(e){}
+  const def = {usuario:"admin", hash: await hashTexto("compras123")};
+  try{ localStorage.setItem(AUTH_KEY, JSON.stringify(def)); }catch(e){}
+  return def;
+}
+async function iniciarSesion(){
+  const u = document.getElementById("logUsuario").value.trim();
+  const c = document.getElementById("logClave").value;
+  const cred = await credenciales();
+  if(u.toLowerCase() === cred.usuario.toLowerCase() && await hashTexto(c) === cred.hash){
+    try{ sessionStorage.setItem("gcSesion", u); }catch(e){}
+    desbloquear(u);
+  } else {
+    document.getElementById("logError").textContent = "Usuario o contraseña incorrectos.";
+    document.getElementById("logClave").value = "";
+  }
+}
+function desbloquear(u){
+  document.getElementById("loginOverlay").style.display = "none";
+  document.body.classList.remove("bloqueado");
+  document.getElementById("usuarioActivo").textContent = "👤 " + u;
+}
+function cerrarSesion(){
+  try{ sessionStorage.removeItem("gcSesion"); }catch(e){}
+  location.reload();
+}
+async function cambiarCredenciales(){
+  const actual = document.getElementById("segClaveActual").value;
+  const nu = document.getElementById("segUsuario").value.trim();
+  const nc = document.getElementById("segClave").value;
+  const nc2 = document.getElementById("segClave2").value;
+  const cred = await credenciales();
+  if(await hashTexto(actual) !== cred.hash){ toast("La contraseña actual es incorrecta"); return; }
+  if(!nu){ toast("Ingresá el nuevo usuario"); return; }
+  if(nc.length < 6){ toast("La nueva contraseña debe tener al menos 6 caracteres"); return; }
+  if(nc !== nc2){ toast("Las contraseñas no coinciden"); return; }
+  try{ localStorage.setItem(AUTH_KEY, JSON.stringify({usuario:nu, hash: await hashTexto(nc)})); }catch(e){}
+  ["segClaveActual","segUsuario","segClave","segClave2"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("usuarioActivo").textContent = "👤 " + nu;
+  toast("Credenciales actualizadas");
+}
+document.getElementById("logClave").addEventListener("keydown", e=>{ if(e.key==="Enter") iniciarSesion(); });
+document.getElementById("logUsuario").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("logClave").focus(); });
+
+/* ================== ARRANQUE ================== */
+document.getElementById("fechaHoy").textContent =
+  new Date().toLocaleDateString("es-AR",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+cargar();
+renderTodo();
+(async ()=>{
+  await credenciales(); // asegura credenciales iniciales
+  let ses = null;
+  try{ ses = sessionStorage.getItem("gcSesion"); }catch(e){}
+  if(ses) desbloquear(ses);
+  else document.getElementById("logUsuario").focus();
+})();
+</script>
+</body>
+<!-- Sistema de Gestión de Compras · v8: importación de listas PDF + ingreso automático de pedidos por email -->
+</html>
