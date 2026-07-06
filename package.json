@@ -1,0 +1,11 @@
+{
+  "name": "gestion-compras",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "serve -l $PORT ."
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  }
+}
