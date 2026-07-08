@@ -173,6 +173,7 @@ body.bloqueado header,body.bloqueado nav,body.bloqueado main{filter:blur(6px);po
       <h2 style="margin:0">Solicitudes de compra</h2>
       <div class="fila">
         <button class="btn sec" onclick="abrirPedidos()">📥 Ingresar pedidos de email</button>
+        <button class="btn sec" onclick="revisarBandejaAhora()">🔄 Verificar bandeja ahora</button>
         <button class="btn" onclick="abrirNuevaSolicitud()">+ Nueva solicitud</button>
       </div>
     </div>
@@ -318,10 +319,42 @@ body.bloqueado header,body.bloqueado nav,body.bloqueado main{filter:blur(6px);po
       <button class="btn sec" onclick="copiarPlantillaPedido()">📋 Copiar plantilla para los sectores</button>
     </div>
     <p style="color:var(--texto-sec);font-size:12.5px;margin-top:8px">
-      <b>Circuito:</b> los sectores envían su pedido a esa casilla usando la plantilla → en <b>Solicitudes → 📥 Ingresar pedidos de email</b> pegás el contenido de los mails recibidos
-      y el sistema crea las solicitudes automáticamente (detecta sector, solicitante, producto y cantidad, incluso varios pedidos juntos).
-      El ingreso sin intervención (leyendo la casilla solo) requiere conectar un servidor de correo: se puede agregar más adelante.
+      <b>Circuito:</b> los sectores envían su pedido a esa casilla usando la plantilla. Con la <b>conexión automática (IMAP)</b> configurada abajo,
+      el sistema lee esa casilla solo y crea las solicitudes sin intervención. Si preferís no conectar la casilla, en
+      <b>Solicitudes → 📥 Ingresar pedidos de email</b> podés pegar el contenido de los mails a mano en cualquier momento.
     </p>
+  </div>
+  <div class="card">
+    <h2>🤖 Conexión automática a la casilla (IMAP)</h2>
+    <p style="color:var(--texto-sec);font-size:13px;margin-bottom:10px">
+      El sistema se conecta periódicamente a la casilla por IMAP, detecta los mails nuevos con el formato de pedido y crea las solicitudes automáticamente
+      (mismo formato que "Sector: / Solicitante: / Producto: / Cantidad: / Monto:"). Requiere que el servidor de esta app tenga configurada la variable de entorno
+      <code>ADMIN_TOKEN</code>; pegá acá el mismo valor para poder administrar la conexión.
+    </p>
+    <div class="fila">
+      <div class="campo" style="flex:1;min-width:200px"><label>Token de administración del servidor</label><input id="imapAdminToken" type="password" placeholder="Debe coincidir con ADMIN_TOKEN"></div>
+      <button class="btn chico sec" onclick="guardarAdminToken()">Guardar token</button>
+    </div>
+    <div class="fila" style="margin-top:10px">
+      <div class="campo" style="flex:1;min-width:200px"><label>Host IMAP</label><input id="imapHost" placeholder="imap.tuempresa.com.ar"></div>
+      <div class="campo"><label>Puerto</label><input id="imapPort" type="number" value="993" style="width:100px"></div>
+      <div class="campo"><label>TLS</label><select id="imapSecure"><option value="true">Sí</option><option value="false">No</option></select></div>
+      <div class="campo"><label>Carpeta</label><input id="imapFolder" value="INBOX" style="width:120px"></div>
+    </div>
+    <div class="fila" style="margin-top:10px">
+      <div class="campo" style="flex:1;min-width:200px"><label>Usuario</label><input id="imapUser" placeholder="solicitudpedidos@tuempresa.com.ar"></div>
+      <div class="campo" style="flex:1;min-width:200px"><label>Contraseña</label><input id="imapPassword" type="password"></div>
+      <div class="campo"><label>Revisar cada (min.)</label><input id="imapIntervalo" type="number" min="1" value="5" style="width:110px"></div>
+    </div>
+    <label style="display:block;margin-top:10px;font-size:13px;font-weight:600;color:var(--azul-osc)">
+      <input type="checkbox" id="imapEnabled"> Activar revisión automática de la casilla
+    </label>
+    <div class="fila" style="margin-top:12px">
+      <button class="btn" onclick="guardarConfigImap()">Guardar conexión</button>
+      <button class="btn sec" onclick="probarConexionImap()">🔌 Probar conexión</button>
+      <button class="btn sec" onclick="revisarBandejaAhora()">🔄 Revisar ahora</button>
+    </div>
+    <div id="imapEstado" style="margin-top:10px;font-size:13px"></div>
   </div>
   <div class="card">
     <h2>🔗 Conexión oficial con Mercado Libre (recomendada — 100% estable)</h2>
@@ -654,6 +687,7 @@ function datosEjemplo(){
     mlAuto: true,
     mlCred: {clientId:"", clientSecret:""},
     mailPedidos: "",
+    imapAdminToken: "",
     stock: [
       {id:1, nombre:"Resma papel A4 75g x500 hojas", categoria:"Papelería", cantidad:35, minimo:20, ultCompra:f(1,10)},
       {id:2, nombre:"Toner negro compatible", categoria:"Tecnología", cantidad:2, minimo:4, ultCompra:f(2,20)},
@@ -692,6 +726,7 @@ function migrar(){ // compatibilidad con datos guardados por versiones anteriore
   if(state.mlAuto==null) state.mlAuto = true;
   state.mlCred = state.mlCred || {clientId:"", clientSecret:""};
   if(state.mailPedidos==null) state.mailPedidos = "";
+  if(state.imapAdminToken==null) state.imapAdminToken = "";
 }
 function toast(msg){
   const t = document.getElementById("toast");
@@ -942,6 +977,7 @@ document.querySelectorAll("nav button").forEach(b=>{
     document.getElementById("sec-"+b.dataset.sec).classList.add("act");
     if(b.dataset.sec==="dashboard") renderDashboard();
     if(b.dataset.sec==="stock") renderStock();
+    if(b.dataset.sec==="config") cargarConfigImap();
   };
 });
 document.querySelectorAll("#niveles button").forEach(b=>{
@@ -1468,6 +1504,16 @@ function procesarPedidos(){
     out.innerHTML = '<div class="nota">⚠️ No se detectaron pedidos. Verificá que cada línea tenga el formato <code>Campo: valor</code> (al menos "Producto:").</div>';
     return;
   }
+  const creadas = crearSolicitudesDesdePedidos(pedidos, "email");
+  out.innerHTML = '<div class="nota">✅ <b>'+creadas.length+' solicitud/es ingresadas:</b><br>'+
+    creadas.map(s=>"N° "+s.id+" · "+s.sector+" · "+s.producto+" x"+s.cantidad).join("<br>")+
+    '<br><span class="mini">Ya figuran como Pendientes en la lista de solicitudes.</span></div>';
+  document.getElementById("pedTexto").value = "";
+  toast(creadas.length+" solicitud/es creadas desde email");
+}
+// Da de alta una Solicitud "Pendiente" por cada pedido detectado (formato Sector/Solicitante/Producto/Cantidad/Monto).
+// Usada tanto por el ingreso manual (pegar texto) como por la sincronización automática desde la casilla IMAP.
+function crearSolicitudesDesdePedidos(pedidos, origen){
   const creadas = [];
   pedidos.forEach(p=>{
     let sector = p.sector || state.sectores[0] || "General";
@@ -1478,18 +1524,104 @@ function procesarPedidos(){
       id: nextId(state.solicitudes), fecha: hoyISO(), sector,
       solicitante: p.solicitante || "(email)", producto: p.producto,
       cantidad: p.cantidad || 1, monto: p.monto || 0, estado: "Pendiente",
-      origen: "email", cotRecibidas: []
+      origen: origen || "email", cotRecibidas: []
     };
     state.solicitudes.push(nueva);
     creadas.push(nueva);
   });
-  guardar(); llenarSelects(); renderSolicitudes(); renderSectores();
-  out.innerHTML = '<div class="nota">✅ <b>'+creadas.length+' solicitud/es ingresadas:</b><br>'+
-    creadas.map(s=>"N° "+s.id+" · "+s.sector+" · "+s.producto+" x"+s.cantidad).join("<br>")+
-    '<br><span class="mini">Ya figuran como Pendientes en la lista de solicitudes.</span></div>';
-  document.getElementById("pedTexto").value = "";
-  toast(creadas.length+" solicitud/es creadas desde email");
+  if(creadas.length){ guardar(); llenarSelects(); renderSolicitudes(); renderSectores(); }
+  return creadas;
 }
+
+/* ============ SINCRONIZACIÓN AUTOMÁTICA CON LA CASILLA (IMAP, vía backend) ============ */
+function apiHeaders(){
+  return {"Content-Type":"application/json", "x-admin-token": state.imapAdminToken||""};
+}
+async function apiFetch(ruta, opts){
+  try{
+    const r = await fetch(ruta, Object.assign({headers: apiHeaders()}, opts||{}));
+    const d = await r.json().catch(()=>null);
+    if(!r.ok) return {ok:false, error:(d&&d.error)||("HTTP "+r.status), data:null};
+    return {ok:true, data:d};
+  }catch(e){
+    return {ok:false, error:"Sin conexión con el servidor", data:null};
+  }
+}
+function guardarAdminToken(){
+  state.imapAdminToken = document.getElementById("imapAdminToken").value.trim();
+  guardar(); toast("Token guardado"); cargarConfigImap();
+}
+async function cargarConfigImap(){
+  const tokenInput = document.getElementById("imapAdminToken");
+  if(tokenInput) tokenInput.value = state.imapAdminToken||"";
+  const r = await apiFetch("/api/imap/config");
+  if(!r.ok){ mostrarEstadoImap(r.error); return; }
+  const c = r.data||{};
+  document.getElementById("imapHost").value = c.host||"";
+  document.getElementById("imapPort").value = c.port||993;
+  document.getElementById("imapSecure").value = c.secure===false ? "false" : "true";
+  document.getElementById("imapFolder").value = c.folder||"INBOX";
+  document.getElementById("imapUser").value = c.user||"";
+  document.getElementById("imapPassword").value = c.password||"";
+  document.getElementById("imapIntervalo").value = c.intervalMinutes||5;
+  document.getElementById("imapEnabled").checked = !!c.enabled;
+  actualizarEstadoImap();
+}
+function datosFormImap(){
+  return {
+    host: document.getElementById("imapHost").value.trim(),
+    port: Number(document.getElementById("imapPort").value)||993,
+    secure: document.getElementById("imapSecure").value === "true",
+    folder: document.getElementById("imapFolder").value.trim()||"INBOX",
+    user: document.getElementById("imapUser").value.trim(),
+    password: document.getElementById("imapPassword").value,
+    intervalMinutes: Number(document.getElementById("imapIntervalo").value)||5,
+    enabled: document.getElementById("imapEnabled").checked
+  };
+}
+async function guardarConfigImap(){
+  const r = await apiFetch("/api/imap/config", {method:"POST", body: JSON.stringify(datosFormImap())});
+  if(!r.ok){ toast("No se pudo guardar: "+r.error); mostrarEstadoImap(r.error); return; }
+  document.getElementById("imapPassword").value = (r.data&&r.data.password)||"";
+  toast("Conexión IMAP guardada");
+  actualizarEstadoImap();
+}
+async function probarConexionImap(){
+  mostrarEstadoImap("⏳ Probando conexión...");
+  const r = await apiFetch("/api/imap/probar", {method:"POST", body: JSON.stringify(datosFormImap())});
+  const ok = r.ok && r.data && r.data.ok;
+  mostrarEstadoImap(ok ? "✅ Conexión exitosa a la casilla." : "⚠️ "+(r.error || (r.data&&r.data.error)));
+}
+async function revisarBandejaAhora(){
+  toast("Revisando la casilla...");
+  const r = await apiFetch("/api/imap/revisar-ahora", {method:"POST"});
+  const ok = r.ok && r.data && r.data.ok;
+  if(!ok){ const err = r.error || (r.data&&r.data.error); toast("No se pudo revisar: "+err); mostrarEstadoImap(err); return; }
+  await sincronizarPedidosCola();
+  toast("Revisión completa: "+(r.data.nuevas||0)+" pedido/s nuevo/s detectado/s");
+  actualizarEstadoImap();
+}
+async function actualizarEstadoImap(){
+  const r = await apiFetch("/api/imap/estado");
+  if(!r.ok){ mostrarEstadoImap(r.error); return; }
+  const e = r.data||{};
+  mostrarEstadoImap(
+    (e.enabled ? "🟢 Activo" : "⚪ Inactivo") + " · cada "+e.intervalMinutes+" min · última revisión: "+(e.ultimaRevision ? new Date(e.ultimaRevision).toLocaleString("es-AR") : "—") +
+    (e.ultimoError ? " · ⚠️ "+e.ultimoError : "") + (e.pendientesEnCola ? " · "+e.pendientesEnCola+" pedido/s por sincronizar" : ""));
+}
+function mostrarEstadoImap(msg){
+  const el = document.getElementById("imapEstado");
+  if(el) el.textContent = msg||"";
+}
+async function sincronizarPedidosCola(){
+  const r = await apiFetch("/api/pedidos-cola");
+  if(!r.ok) return;
+  const cola = r.data||[];
+  if(!cola.length) return;
+  crearSolicitudesDesdePedidos(cola, "email-auto");
+  await apiFetch("/api/pedidos-cola/ack", {method:"POST", body: JSON.stringify({ids: cola.map(p=>p.colaId)})});
+}
+setInterval(()=>{ if(state && state.imapAdminToken) sincronizarPedidosCola(); }, 60000);
 
 /* ================== STOCK ================== */
 function artDe(id){ return state.stock.find(a=>a.id===id); }
@@ -1923,6 +2055,7 @@ renderTodo();
   try{ ses = sessionStorage.getItem("gcSesion"); }catch(e){}
   if(ses) desbloquear(ses);
   else document.getElementById("logUsuario").focus();
+  if(state.imapAdminToken) sincronizarPedidosCola();
 })();
 </script>
 </body>
