@@ -41,7 +41,7 @@ app.post("/api/pedidos-cola/ack", requiereToken, (req, res) => {
   res.json({ pendientes: imap.confirmarCola(ids) });
 });
 
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, { extensions: ["html"] }));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
